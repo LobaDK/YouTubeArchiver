@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "YouTubeArchiver", "YouTubeArchiver\YouTubeArchiver.pyproj", "{3867461A-63C1-4608-AF01-FE3275BC3560}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3867461A-63C1-4608-AF01-FE3275BC3560}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3867461A-63C1-4608-AF01-FE3275BC3560}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4FB72F88-FE54-48ED-9547-96F2650DBD2A}
+	EndGlobalSection
+EndGlobal
