@@ -68,7 +68,7 @@ while True:
                     time.sleep(5)
                     sys.exit(1)
             elif downloadYoutubeDL == 'N':
-                print (f'\nAs {ytdlprint} is required, the program will now exit...')
+                print (f'\n{ytdlprint} is required, the program will now exit...')
                 time.sleep(3)
                 sys.exit(1)
             else:
@@ -132,7 +132,7 @@ while True:
                         time.sleep(5)
                         sys.exit(1)
                 elif downloadFFmpeg == 'N':
-                    print('\nAs ffmpeg is required, the program will now exit...')
+                    print('\nFfmpeg is required, the program will now exit...')
                     time.sleep(3)
                     sys.exit(1)
                 else:
@@ -142,11 +142,11 @@ while True:
     elif checkFF == True:
         break
     else:
-        if errordetection == 3: #exit the program with exitcode 1 if it has failed 3 times to detect the downloader
+        if errordetection == 3: #exit the program with exitcode 1 if it has failed 3 times to detect ffmpeg
             print('3rd detection error. Exiting...')
             time.sleep(3)
             sys.exit(1)
-        print('\nError detecting FFmpeg... please try again')
+        print('\nError detecting FFmpeg. Retrying...')
         errordetection += 1
         continue
 
@@ -166,14 +166,14 @@ while True:
         while True: #used to allow the user to return to the URL section after a download
             dURL = input('\nURL of video to download: ')
             if returntomenu == True:
-                print('\nRemember you can drag and drop a folder into this to automatically fill out the input. Custom folder name has been removed, so please specify the exact folder you wish to download to.')
+                print('\nRemember you can drag and drop a folder into this to automatically fill out the input. Custom folder name has been removed, so please specify the exact folder you wish to download to.\nIf the folder does not already exist, it will be created, including any folders before it.')
                 dest = input('\nFolder to download to: ')
                 dest = dest.strip("\"' \t") #strips input of double and single quotes, as well as space and tab
                 path = Path(dest)
             while True:
                 if returntomenu == False:
                     break
-                print(f'\nIn order to prevent downloading of the same file, {ytdlprint} stores each downloaded ID in a file.\nThis file is either named "archive.txt" or a user-specified name, located in the destination folder.')
+                print(f'\nIn order to prevent downloading of the same file, {ytdlprint} stores each downloaded ID in a file.\nThis file is either named "archive.txt" or a user-specified name, located in the destination folder.\nIf you have used the old batch-script version of this program, and would like to keep using the previous archives, please move or copy them into their respective folders')
                 custom = input('\nWould you like to use a custom archive file? Y/N: ').upper()
                 if custom == 'Y':
                     print('\nPlease do not include the .txt at the end, as it is automatically added\n')
@@ -212,7 +212,7 @@ while True:
 
             while True:
                 downloadmode = input('\nDo you want to only download [A]udio, or both [V]ideo and audio? A/V: ').upper()
-                if downloadmode == 'A':
+                if downloadmode == 'A': #code to download only audio
                     output = dest + os.sep + '%(title)s.%(ext)s'
                     path.mkdir(parents=True, exist_ok=True)
                     cmda = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
@@ -226,7 +226,7 @@ while True:
                     except: #catch exception caused if user presses CTRL+C to stop the process
                         pass
                     while True:
-                        converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: ').upper()
+                        converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s').upper()
                         if converttomp3 == 'Y':
                             break
                         elif converttomp3 == 'N':
@@ -249,12 +249,8 @@ while True:
                         break
                     break
 
-                if downloadmode == 'V':
-                    #insert code to download both video and audio, as well as option to extract audio from video(s)
+                if downloadmode == 'V': #insert code to download both video and audio, as well as option to extract audio from video(s)
                     pass
-                else:
-                    notvalid()
-                    continue
             if converttomp3 == 'Y':
                             #insert code to convert with ffmpeg
                             pass
@@ -265,6 +261,7 @@ while True:
             if returntomenu == False:
                 continue
     elif mmchoice == 'A':
+        #insert code for archiver
         pass
     elif mmchoice == 'E':
         sys.exit()
