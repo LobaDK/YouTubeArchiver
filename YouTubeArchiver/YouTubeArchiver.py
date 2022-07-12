@@ -1,36 +1,54 @@
-import subprocess
-import sys, os
-from urllib import request
-from sys import platform
-from subprocess import CalledProcessError
-import time
-from pathlib import Path
+import os
 import shutil
-from distutils.spawn import find_executable
+import subprocess
+import sys
+import time
+import requests
+from msilib.schema import Environment
+from multiprocessing import ProcessError
+from pathlib import Path
+from subprocess import CalledProcessError
+from sys import platform
+from urllib import request
+from tqdm import tqdm
+
 try:
     selfpath = os.path.dirname(os.path.realpath(__file__)) #attempts to get the scripts own directory
 except NameError:
     selfpath = os.path.dirname(os.path.abspath(sys.argv[0])) #runs this instead if script is used inside py2exe
 ytdl = 'yt-dlp' #sets the downloader used via variable for easier swapping
 ytdlprint = 'yt-dlp' #sets the displayed downloader used via variable for easier swapping
+
 def clear():
     if platform == 'win32' or platform == 'cygwin': #used to clear the screen on Windows
         os.system('cls')
     elif platform == 'linux' or platform == 'darwin': #used to clear the screen on Linux and Mac
         os.system('clear')
+
 def CheckYTDL(): #checks if the set youtube downloader is present
     if platform == 'Linux' or platform == 'darwin':
         if os.path.exists(os.path.join(selfpath,ytdl)): #checks if a file with the downloader name exists in the same directory as the python script
-            return find_executable(os.path.join(selfpath,ytdl)) is not None #returns True if the file is an executable
+            return shutil.which(os.path.join(selfpath,ytdl)) is not None #returns True if the file is an executable
         else:
-            return find_executable(ytdl) is not None #returns true if the downloader can be launched from anywhere E.G. is in PATH
+            return shutil.which(ytdl) is not None #returns true if the downloader can be launched, either from PATH or the same directory
     else:
-        return find_executable(ytdl) is not None #returns true if the downloader can be launched from anywhere E.G. is in PATH
+        return shutil.which(ytdl) is not None #returns true if the downloader can be launched, either from PATH or the same directory
+
 def CheckFFmpeg(): #checks if ffmpeg is present
-    from distutils.spawn import find_executable
-    return find_executable('ffmpeg') is not None
+    return shutil.which('ffmpeg') is not None
+
 def notvalid():
     print('\nInput not valid, please try again')
+
+def download(url: str, fname: str):
+    resp = requests.get(url, stream=True)
+    total = int(resp.headers.get('content-lenght', 0))
+    with open(fname, 'wb') as file, tqdm(desc=fname, total=total,unit='iB', unit_scale=True, unit_divisor=1024,) as bar:
+        for data in resp.iter_content(chunk_size=1024):
+            size = file.write(data)
+            bar.update(size)
+            if __name__ == "__main__":
+                pass
 
 errordetection = 0
 #check if the youtube downloader is present
@@ -43,25 +61,40 @@ while True:
             if downloadYoutubeDL == 'Y':
                 if platform == 'win32' or platform == 'cygwin': #download if Windows or Cygwin
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
-                    localfile = ytdl + '.exe'
-                    print('\nDownloading...')
-                    request.urlretrieve(URL,localfile)
-                    print('\nDownload complete!')
+                    try:
+                        download(URL, 'yt-dlp.exe')
+                    except KeyboardInterrupt:
+                        print('Cleaning up...')
+                        time.sleep(1)
+                        os.remove(ytdl + '.exe')
+                        print('Done!')
+                        sys.exit(0)
+
                     break
                 elif platform == 'linux': #download if linux
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp'
-                    localfile = os.path.join(selfpath,ytdl)
-                    print('\nDownloading...')
-                    request.urlretrieve(URL,localfile)
-                    print('\nDownload complete!')
+                    try:
+                        download(URL, 'yt-dlp')
+                    except KeyboardInterrupt:
+                        print('Cleaning up...')
+                        time.sleep(1)
+                        os.remove(ytdl)
+                        print('Done!')
+                        sys.exit(0)
+
                     os.chmod(os.path.join(selfpath,ytdl), 0o700)
                     break
                 elif platform == 'darwin': #download if MacOS
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos'
-                    localfile = os.path.join(selfpath,ytdl)
-                    print('\nDownloading...')
-                    request.urlretrieve(URL,localfile)
-                    print('\nDownload complete!')
+                    try:
+                        download(URL, 'yt-dlp')
+                    except KeyboardInterrupt:
+                        print('Cleaning up...')
+                        time.sleep(1)
+                        os.remove(ytdl)
+                        print('Done!')
+                        sys.exit(0)
+
                     break
                 else:
                     print('\nError: OS not detected or supported. You will need to download it yourself')
@@ -101,7 +134,8 @@ while True:
         while True:
             print('\nFFmpeg not found, please download it first')
             if platform == 'linux':
-                print('Linux based system detected. An automated version of this is not yet available, please manually install/download ffmpeg')
+                print('Linux based system detected. An automated version of this is not yet available, please manually install/download ffmpeg.')
+                print('Usually installing ffmpeg through your package manager is sufficient.')
                 time.sleep(5)
                 sys.exit(1)
             else:
@@ -110,20 +144,39 @@ while True:
                     if platform == 'win32' or platform == 'cygwin':
                         URL = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z'
                         localfile = 'ffmpeg.7z'
-                        print('\nDownloading, this may take a while...')
-                        request.urlretrieve(URL,localfile)
+                        try:
+                            download(URL, localfile)
+                        except KeyboardInterrupt:
+                            print('Cleaning up...')
+                            time.sleep(1)
+                            os.remove(localfile)
+                            print('Done!')
+                            sys.exit(0)
                         print('\nDownload complete! extracting...')
-                        cmd = ['bin/7za.exe', 'e', 'ffmpeg.7z', 'ffmpeg.exe', '-r']
-                        subprocess.run(cmd)
+                        cmd = ['bin/7zr.exe', 'e', 'ffmpeg.7z', 'ffmpeg.exe', '-r']
+                        try:
+                            subprocess.run(cmd)
+                        except KeyboardInterrupt:
+                            print('Cleaning up...')
+                            time.sleep(1)
+                            os.remove(localfile)
+                            print('Done!')
+                            sys.exit(0)
                         print('\nExtraction done')
                         break
                     elif platform == 'darwin':
                         URL = 'https://evermeet.cx/ffmpeg/getrelease/zip'
-                        localfile = 'ffmpeg.7z'
-                        print('\nDownloading, this may take a while...')
-                        request.urlretrieve(URL,localfile)
+                        localfile = 'ffmpeg.zip'
+                        try:
+                            download(URL, localfile)
+                        except KeyboardInterrupt:
+                            print('Cleaning up...')
+                            time.sleep(1)
+                            os.remove(localfile)
+                            print('Done!')
+                            sys.exit(0)
                         print('\nDownload complete! extracting...')
-                        cmd = ['bin/7za.exe', 'e', 'ffmpeg.7z', 'ffmpeg', '-r']
+                        cmd = ['bin/7zr.exe', 'e', 'ffmpeg.7z', 'ffmpeg', '-r']
                         subprocess.run(cmd)
                         print('\nExtraction done')
                         break
