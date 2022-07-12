@@ -156,6 +156,7 @@ while True:
                         cmd = ['bin/7zr.exe', 'e', 'ffmpeg.7z', 'ffmpeg.exe', '-r']
                         try:
                             subprocess.run(cmd)
+                            os.remove(localfile)
                         except KeyboardInterrupt:
                             print('Cleaning up...')
                             time.sleep(1)
