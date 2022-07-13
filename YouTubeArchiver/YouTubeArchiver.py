@@ -7,6 +7,8 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from sys import platform
 from zipfile import ZipFile
+import threading
+import glob
 
 import requests
 from tqdm import tqdm
@@ -75,6 +77,15 @@ def downloadffmpeg(URL, localfile): #downloader function for ffmpeg
         sys.exit(0)
     else:
         return
+
+def ConvertToMP3(dest):
+    files = glob.glob(os.path.join(dest,'*.m4a'))
+    if not os.path.isdir(dest + ' MP3'):
+        os.makedirs(dest + ' MP3')
+    for file in files:
+        outputfile = Path(file).stem + '.mp3'
+        cmd = ['ffmpeg', '-n', '-i', file, '-b:a', '128k', os.path.join(dest + ' MP3', outputfile)]
+        subprocess.run(cmd)
 
 errordetection = 0
 #check if the youtube downloader is present
@@ -285,7 +296,7 @@ while True:
                     except: #catch exception caused if user presses CTRL+C to stop the process
                         pass
                     while True:
-                        converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s').upper()
+                        converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                         if converttomp3 == 'Y':
                             break
                         elif converttomp3 == 'N':
@@ -311,8 +322,20 @@ while True:
                 if downloadmode == 'V': #insert code to download both video and audio, as well as option to extract audio from video(s)
                     pass
             if converttomp3 == 'Y':
-                            #insert code to convert with ffmpeg
-                            pass
+                #insert code to convert with ffmpeg
+                t1 = threading.Thread(target=ConvertToMP3, args=(dest,))
+                t2 = threading.Thread(target=ConvertToMP3, args=(dest,))
+                t3 = threading.Thread(target=ConvertToMP3, args=(dest,))
+                
+                t1.start()
+                t2.start()
+                t3.start()
+
+                t1.join()
+                t2.join()
+                t3.join()
+
+                pass
             if badexit:
                 break
             if returntomenu:
