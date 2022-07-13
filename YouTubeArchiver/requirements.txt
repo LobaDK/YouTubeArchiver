@@ -1,1 +1,1 @@
-setuptools==60.9.3
+tqdm==4.64.0

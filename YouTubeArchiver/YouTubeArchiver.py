@@ -3,13 +3,12 @@ import shutil
 import subprocess
 import sys
 import time
-import requests
-from msilib.schema import Environment
-from multiprocessing import ProcessError
 from pathlib import Path
 from subprocess import CalledProcessError
 from sys import platform
-from urllib import request
+from zipfile import ZipFile
+
+import requests
 from tqdm import tqdm
 
 try:
@@ -40,15 +39,42 @@ def CheckFFmpeg(): #checks if ffmpeg is present
 def notvalid():
     print('\nInput not valid, please try again')
 
-def download(url: str, fname: str):
-    resp = requests.get(url, stream=True)
-    total = int(resp.headers.get('content-lenght', 0))
-    with open(fname, 'wb') as file, tqdm(desc=fname, total=total,unit='iB', unit_scale=True, unit_divisor=1024,) as bar:
-        for data in resp.iter_content(chunk_size=1024):
-            size = file.write(data)
-            bar.update(size)
-            if __name__ == "__main__":
-                pass
+def downloadytdl(URL, filename): #downloader function for the youtube downloader
+    chunk_size = 1024 #sets chunk size for the stream
+    r = requests.get(URL, stream=True)
+    total_size = int(r.headers['content-length']) #sets total size to that of the content length from it's headers
+    try:
+        with open(filename, 'wb') as f:
+            for data in tqdm(iterable=r.iter_content(chunk_size=chunk_size), desc='Downloading', total=total_size/chunk_size, unit='KB'): #display progress bar as it's downloaded
+                f.write(data)
+        print('\nDownload complete!')
+        time.sleep(1.5)
+    except KeyboardInterrupt: #catch if the user uses the interrupt key, allowing for cleanup
+        print('Cleaning up...')
+        time.sleep(1)
+        os.remove(ytdl + '.exe')
+        print('Done!')
+        sys.exit(0)
+    else:
+        return True
+def downloadffmpeg(URL, localfile): #downloader function for ffmpeg
+    chunk_size = 1024 #sets chunk size for the stream
+    r = requests.get(URL, stream=True)
+    total_size = int(r.headers['content-length']) #sets total size to that of the content length from it's headers
+    try:
+        with open(localfile, 'wb') as f:
+            for data in  tqdm(iterable=r.iter_content(chunk_size=chunk_size), desc='Downloading', total=total_size/chunk_size, unit='KB'): #display progress bar as it's downloaded
+                f.write(data)
+        print('Download complete!')
+        time.sleep(1.5)
+    except KeyboardInterrupt: #catch if the user uses the interrupt key, allowing for cleanup
+        print('Cleaning up...')
+        time.sleep(1)
+        os.remove(localfile)
+        print('Done!')
+        sys.exit(0)
+    else:
+        return
 
 errordetection = 0
 #check if the youtube downloader is present
@@ -57,45 +83,27 @@ while True:
     if checkYT == False:
         while True:
             print(f'{ytdlprint} not found, please download it first')
-            downloadYoutubeDL = input('\nWould you like the program to download it for you? Y/N: ').upper()
+            downloadYoutubeDL = input('\nWould you like the program to download it for you? (REQUIRED) Y/N: ').upper()
             if downloadYoutubeDL == 'Y':
                 if platform == 'win32' or platform == 'cygwin': #download if Windows or Cygwin
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
-                    try:
-                        download(URL, 'yt-dlp.exe')
-                    except KeyboardInterrupt:
-                        print('Cleaning up...')
-                        time.sleep(1)
-                        os.remove(ytdl + '.exe')
-                        print('Done!')
-                        sys.exit(0)
+                    filename = ytdl + '.exe'
+                    if downloadytdl(URL, filename):
+                        break
 
-                    break
                 elif platform == 'linux': #download if linux
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp'
-                    try:
-                        download(URL, 'yt-dlp')
-                    except KeyboardInterrupt:
-                        print('Cleaning up...')
-                        time.sleep(1)
-                        os.remove(ytdl)
-                        print('Done!')
-                        sys.exit(0)
-
-                    os.chmod(os.path.join(selfpath,ytdl), 0o700)
-                    break
+                    filename = ytdl
+                    if downloadytdl(URL, filename):
+                        os.chmod(os.path.join(selfpath,ytdl), 0o700)
+                        break
+                        
                 elif platform == 'darwin': #download if MacOS
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos'
-                    try:
-                        download(URL, 'yt-dlp')
-                    except KeyboardInterrupt:
-                        print('Cleaning up...')
-                        time.sleep(1)
-                        os.remove(ytdl)
-                        print('Done!')
-                        sys.exit(0)
+                    filename = ytdl
+                    if downloadytdl(URL, filename):
+                        break
 
-                    break
                 else:
                     print('\nError: OS not detected or supported. You will need to download it yourself')
                     time.sleep(5)
@@ -109,7 +117,7 @@ while True:
                 time.sleep(3)
                 clear()
 
-    elif checkYT == True:
+    elif checkYT:
         break
     else:
         if errordetection == 3: #exit the program with exitcode 1 if it has failed 3 times to detect the downloader
@@ -139,21 +147,14 @@ while True:
                 time.sleep(5)
                 sys.exit(1)
             else:
-                downloadFFmpeg = input('\nWould you like the program to download it for you? Y/N: ').upper()
+                downloadFFmpeg = input('\nWould you like the program to download it for you? (REQUIRED) Y/N: ').upper()
                 if downloadFFmpeg == 'Y':
                     if platform == 'win32' or platform == 'cygwin':
                         URL = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z'
                         localfile = 'ffmpeg.7z'
-                        try:
-                            download(URL, localfile)
-                        except KeyboardInterrupt:
-                            print('Cleaning up...')
-                            time.sleep(1)
-                            os.remove(localfile)
-                            print('Done!')
-                            sys.exit(0)
-                        print('\nDownload complete! extracting...')
-                        cmd = ['bin/7zr.exe', 'e', 'ffmpeg.7z', 'ffmpeg.exe', '-r']
+                        downloadffmpeg(URL, localfile)
+                        print('\nExtracting...')
+                        cmd = ['bin/7zr.exe', 'e', localfile, 'ffmpeg.exe', '-r']
                         try:
                             subprocess.run(cmd)
                             os.remove(localfile)
@@ -163,24 +164,28 @@ while True:
                             os.remove(localfile)
                             print('Done!')
                             sys.exit(0)
-                        print('\nExtraction done')
-                        break
+                        else:
+                            print('\nExtraction done')
+                            break
                     elif platform == 'darwin':
                         URL = 'https://evermeet.cx/ffmpeg/getrelease/zip'
                         localfile = 'ffmpeg.zip'
+                        downloadffmpeg(URL, localfile)
+                        
+                        print('\nExtracting...')
                         try:
-                            download(URL, localfile)
+                            unzip = ZipFile(localfile)
+                            unzip.extract(member='ffmpeg')
+                            os.remove(localfile)
                         except KeyboardInterrupt:
                             print('Cleaning up...')
                             time.sleep(1)
                             os.remove(localfile)
                             print('Done!')
                             sys.exit(0)
-                        print('\nDownload complete! extracting...')
-                        cmd = ['bin/7zr.exe', 'e', 'ffmpeg.7z', 'ffmpeg', '-r']
-                        subprocess.run(cmd)
-                        print('\nExtraction done')
-                        break
+                        else:
+                            print('\nExtraction done')
+                            break
                     else:
                         print('\nError: OS not detected or supported. You will need to download it yourself')
                         time.sleep(5)
@@ -193,7 +198,7 @@ while True:
                     notvalid()
                     time.sleep(3)
                     clear()
-    elif checkFF == True:
+    elif checkFF:
         break
     else:
         if errordetection == 3: #exit the program with exitcode 1 if it has failed 3 times to detect ffmpeg
@@ -218,11 +223,11 @@ while True:
     if mmchoice == 'D':
         clear()
         while True: #used to allow the user to return to the URL section after a download
-            dURL = input('\nURL of video to download: ')
-            if returntomenu == True:
+            dURL = input('\nURL of video(s) to download: ')
+            if returntomenu:
                 print('\nRemember you can drag and drop a folder into this to automatically fill out the input. Custom folder name has been removed, so please specify the exact folder you wish to download to.\nIf the folder does not already exist, it will be created, including any folders before it.')
                 dest = input('\nFolder to download to: ')
-                dest = dest.strip("\"' \t") #strips input of double and single quotes, as well as space and tab
+                dest = dest.strip("\"' \t") #strips input of starting and trailing double and single quotes, as well as space and tab
                 path = Path(dest)
             while True:
                 if returntomenu == False:
@@ -258,7 +263,7 @@ while True:
                         pass
                     break
                 if test == 'N':
-                    break
+                    break #break into the next loop
                 else:
                     notvalid()
             if badexit == True:
@@ -275,7 +280,7 @@ while True:
                     except CalledProcessError:
                         print(f'\nLooks like {ytdlprint} ran into an error. Please try again')
                         badexit = True
-                        time.sleep(5)
+                        time.sleep(4)
                         break
                     except: #catch exception caused if user presses CTRL+C to stop the process
                         pass
@@ -308,9 +313,9 @@ while True:
             if converttomp3 == 'Y':
                             #insert code to convert with ffmpeg
                             pass
-            if badexit == True:
+            if badexit:
                 break
-            if returntomenu == True:
+            if returntomenu:
                 break
             if returntomenu == False:
                 continue
