@@ -1,4 +1,4 @@
-½import glob
+import glob
 import os
 import shutil
 import subprocess
