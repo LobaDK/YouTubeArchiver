@@ -276,7 +276,7 @@ while True:
                 if test == 'Y':
                     output = dest + os.sep + '%(title)s.%(ext)s'
                     path.mkdir(parents=True, exist_ok=True)
-                    print('\nTesting the 5 first videos...\n')
+                    print('\nTesting the 5 (if there are 5) first videos...\n')
                     cmd = [ytdl,'--abort-on-error','-s','--add-metadata','--get-title','--get-filename','--get-format','--playlist-start','1','--playlist-end','5','-f','bestvideo[ext=mp4]+bestaudio[ext=m4a]',dURL,'-o',output]
                     try:
                         subprocess.run(cmd,check=True)
@@ -292,6 +292,7 @@ while True:
                 else:
                     notvalid()
                     time.sleep(2)
+                    continue
             if badexit == True:
                 break
 
@@ -300,9 +301,42 @@ while True:
                 if downloadmode == 'A': #code to download only audio
                     output = dest + os.sep + '%(title)s.%(ext)s' #combine user-defined directory with the variable names used in yt-dlp
                     path.mkdir(parents=True, exist_ok=True) #create directory if it does not exist, including any missing parents
-                    cmda = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                    if "&list=" in dURL:
+                        while True:
+                            URLplaylist = input('\nURL is link to a playlist, do you wish to download the [E]ntire playlist, a [C]ustom range, or [S]ingle video? E/C/S: ').upper()
+                            if URLplaylist == 'E':
+                                cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                break
+                            elif URLplaylist == 'C':
+                                try:
+                                    playlistindexstart = int(input("\nPlease write the start index, e.g. 2nd video in playlist would be '2' "))
+                                except ValueError:
+                                    notvalid()
+                                    time.sleep(2)
+                                    continue
+                                try:
+                                    playlistindexend = int(input("\nPlease write the end index, e.g. 8th video in playlist would be '8' "))
+                                except ValueError:
+                                    notvalid()
+                                    time.sleep(2)
+                                    continue
+                                if playlistindexend <= playlistindexstart:
+                                    notvalid()
+                                    time.sleep(2)
+                                    continue
+                                cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-I', str(playlistindexstart) + ':' + str(playlistindexend), '-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                break
+                            elif URLplaylist == 'S':
+                                cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','--no-playlist', '-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                break
+                            else:
+                                notvalid()
+                                time.sleep(2)
+                                continue
+                    else:
+                        cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
                     try:
-                        subprocess.run(cmda,check=True)
+                        subprocess.run(cmd,check=True)
                     except CalledProcessError:
                         print(f'\nLooks like {ytdlprint} ran into an error. Please try again')
                         badexit = True
@@ -345,13 +379,19 @@ while True:
             if converttomp3 == 'Y':
                 #insert code to convert with ffmpeg
                 while True:
-                    threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
-                    threads = []
-                    if threadcount <= 0:
+                    try:
+                        threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
+                    except ValueError:
                         notvalid()
                         time.sleep(2)
                         continue
-                    print(f'\nConverting m4a to MP3, using {threadcount} threads...')
+                    else:
+                        if threadcount <= 0:
+                            notvalid()
+                            time.sleep(2)
+                            continue
+                    threads = []
+                    print(f'\nConverting m4a to MP3, using {threadcount} thread(s)...')
                     for _ in range(0,threadcount): #create user-defined amount of threads using a for loop
                         thread = threading.Thread(target=ConvertToMP3, args=(dest,))
                         thread.start()
