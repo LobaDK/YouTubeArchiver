@@ -1,22 +1,27 @@
+½import glob
 import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from subprocess import CalledProcessError
 from sys import platform
 from zipfile import ZipFile
-import threading
-import glob
 
 import requests
 from tqdm import tqdm
 
 try:
+    os.chdir(os.path.dirname(__file__))
+except:
+    os.chdir(os.path.dirname(sys.argv[0]))
+try:
     selfpath = os.path.dirname(os.path.realpath(__file__)) #attempts to get the scripts own directory
 except NameError:
     selfpath = os.path.dirname(os.path.abspath(sys.argv[0])) #runs this instead if script is used inside py2exe
+
 ytdl = 'yt-dlp' #sets the downloader used via variable for easier swapping
 ytdlprint = 'yt-dlp' #sets the displayed downloader used via variable for easier swapping
 
@@ -28,8 +33,8 @@ def clear():
 
 def CheckYTDL(): #checks if the set youtube downloader is present
     if platform == 'Linux' or platform == 'darwin':
-        if os.path.exists(os.path.join(selfpath,ytdl)): #checks if a file with the downloader name exists in the same directory as the python script
-            return shutil.which(os.path.join(selfpath,ytdl)) is not None #returns True if the file is an executable
+        if os.path.exists(ytdl): #checks if a file with the downloader name exists in the same directory as the python script
+            return shutil.which(ytdl) is not None #returns True if the file is an executable
         else:
             return shutil.which(ytdl) is not None #returns true if the downloader can be launched, either from PATH or the same directory
     else:
@@ -85,13 +90,13 @@ def ConvertToMP3(dest):
     for file in files:
         outputfile = Path(file).stem + '.mp3'
         cmd = ['ffmpeg', '-n', '-i', file, '-b:a', '128k', os.path.join(dest + ' MP3', outputfile)]
-        subprocess.run(cmd)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 errordetection = 0
 #check if the youtube downloader is present
 while True:
     checkYT = CheckYTDL()
-    if checkYT == False:
+    if not checkYT:
         while True:
             print(f'{ytdlprint} not found, please download it first')
             downloadYoutubeDL = input('\nWould you like the program to download it for you? (REQUIRED) Y/N: ').upper()
@@ -117,7 +122,7 @@ while True:
 
                 else:
                     print('\nError: OS not detected or supported. You will need to download it yourself')
-                    time.sleep(5)
+                    time.sleep(3)
                     sys.exit(1)
             elif downloadYoutubeDL == 'N':
                 print (f'\n{ytdlprint} is required, the program will now exit...')
@@ -125,7 +130,7 @@ while True:
                 sys.exit(1)
             else:
                 notvalid()
-                time.sleep(3)
+                time.sleep(2)
                 clear()
 
     elif checkYT:
@@ -149,13 +154,13 @@ errordetection = 0
 #check if ffmpeg is present
 while True:
     checkFF = CheckFFmpeg()
-    if checkFF == False:
+    if not checkFF:
         while True:
             print('\nFFmpeg not found, please download it first')
             if platform == 'linux':
                 print('Linux based system detected. An automated version of this is not yet available, please manually install/download ffmpeg.')
                 print('Usually installing ffmpeg through your package manager is sufficient.')
-                time.sleep(5)
+                time.sleep(3)
                 sys.exit(1)
             else:
                 downloadFFmpeg = input('\nWould you like the program to download it for you? (REQUIRED) Y/N: ').upper()
@@ -199,7 +204,7 @@ while True:
                             break
                     else:
                         print('\nError: OS not detected or supported. You will need to download it yourself')
-                        time.sleep(5)
+                        time.sleep(3)
                         sys.exit(1)
                 elif downloadFFmpeg == 'N':
                     print('\nFfmpeg is required, the program will now exit...')
@@ -207,7 +212,7 @@ while True:
                     sys.exit(1)
                 else:
                     notvalid()
-                    time.sleep(3)
+                    time.sleep(2)
                     clear()
     elif checkFF:
         break
@@ -235,13 +240,21 @@ while True:
         clear()
         while True: #used to allow the user to return to the URL section after a download
             dURL = input('\nURL of video(s) to download: ')
+            if not dURL or dURL.isspace() or not dURL.startswith('http'):
+                notvalid()
+                time.sleep(2)
+                continue
             if returntomenu:
                 print('\nRemember you can drag and drop a folder into this to automatically fill out the input. Custom folder name has been removed, so please specify the exact folder you wish to download to.\nIf the folder does not already exist, it will be created, including any folders before it.')
                 dest = input('\nFolder to download to: ')
+                if not dest or dest.isspace():
+                    notvalid()
+                    time.sleep(2)
+                    continue
                 dest = dest.strip("\"' \t") #strips input of starting and trailing double and single quotes, as well as space and tab
                 path = Path(dest)
             while True:
-                if returntomenu == False:
+                if not returntomenu:
                     break
                 print(f'\nIn order to prevent downloading of the same file, {ytdlprint} stores each downloaded ID in a file.\nThis file is either named "archive.txt" or a user-specified name, located in the destination folder.\nIf you have used the old batch-script version of this program, and would like to keep using the previous archives, please move or copy them into their respective folders')
                 custom = input('\nWould you like to use a custom archive file? Y/N: ').upper()
@@ -254,9 +267,10 @@ while True:
                     break
                 else:
                     notvalid()
+                    time.sleep(2)
                     continue
             while True:
-                if returntomenu == False:
+                if not returntomenu:
                     break
                 test = input('\nWould you like to run a test first? Y/N: ').upper()
                 if test == 'Y':
@@ -269,7 +283,7 @@ while True:
                     except CalledProcessError:
                         print('\nAn error has been detected in the test. This is likely caused by the input being wrong. Please try again')
                         badexit = True
-                        time.sleep(5)
+                        time.sleep(3)
                     except: #catch exception caused if user presses CTRL+C to stop the process
                         pass
                     break
@@ -277,14 +291,15 @@ while True:
                     break #break into the next loop
                 else:
                     notvalid()
+                    time.sleep(2)
             if badexit == True:
                 break
 
             while True:
                 downloadmode = input('\nDo you want to only download [A]udio, or both [V]ideo and audio? A/V: ').upper()
                 if downloadmode == 'A': #code to download only audio
-                    output = dest + os.sep + '%(title)s.%(ext)s'
-                    path.mkdir(parents=True, exist_ok=True)
+                    output = dest + os.sep + '%(title)s.%(ext)s' #combine user-defined directory with the variable names used in yt-dlp
+                    path.mkdir(parents=True, exist_ok=True) #create directory if it does not exist, including any missing parents
                     cmda = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
                     try:
                         subprocess.run(cmda,check=True)
@@ -312,36 +327,47 @@ while True:
                                     break
                                 else:
                                     notvalid()
+                                    time.sleep(2)
                                     continue
                         else:
                             notvalid()
+                            time.sleep(2)
                             continue
                         break
                     break
 
-                if downloadmode == 'V': #insert code to download both video and audio, as well as option to extract audio from video(s)
+                elif downloadmode == 'V': #insert code to download both video and audio, as well as option to extract audio from video(s)
                     pass
+                else:
+                    notvalid()
+                    time.sleep(2)
+                    continue
             if converttomp3 == 'Y':
                 #insert code to convert with ffmpeg
-                t1 = threading.Thread(target=ConvertToMP3, args=(dest,))
-                t2 = threading.Thread(target=ConvertToMP3, args=(dest,))
-                t3 = threading.Thread(target=ConvertToMP3, args=(dest,))
-                
-                t1.start()
-                t2.start()
-                t3.start()
+                while True:
+                    threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
+                    threads = []
+                    if threadcount <= 0:
+                        notvalid()
+                        time.sleep(2)
+                        continue
+                    print(f'\nConverting m4a to MP3, using {threadcount} threads...')
+                    for _ in range(0,threadcount): #create user-defined amount of threads using a for loop
+                        thread = threading.Thread(target=ConvertToMP3, args=(dest,))
+                        thread.start()
+                        threads.append(thread)
+                    for jointhreads in threads:
+                        jointhreads.join()
 
-                t1.join()
-                t2.join()
-                t3.join()
 
-                pass
-            if badexit:
-                break
-            if returntomenu:
-                break
-            if returntomenu == False:
-                continue
+                    break
+                if badexit:
+                    break
+                if returntomenu:
+                    break
+                elif not returntomenu:
+                    continue
+            break
     elif mmchoice == 'A':
         #insert code for archiver
         pass
@@ -349,9 +375,10 @@ while True:
         sys.exit()
     elif mmchoice == 'DAE':
         print('\nhaha very funny')
-        time.sleep(3)
+        time.sleep(2)
         clear()
         continue
     else:
         notvalid()
         time.sleep(2)
+        continue
