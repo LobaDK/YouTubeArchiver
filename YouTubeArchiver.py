@@ -1,4 +1,3 @@
-import glob
 import os
 import shutil
 import subprocess
@@ -9,9 +8,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from sys import platform
 from zipfile import ZipFile
-
-import requests
-from tqdm import tqdm
+from functions import clear, CheckYTDL, CheckFFmpeg, notvalid, downloadytdl, downloadffmpeg, ConvertToMP3, cleanupfiles
 
 try:
     os.chdir(os.path.dirname(__file__))
@@ -25,77 +22,10 @@ except NameError:
 ytdl = 'yt-dlp' #sets the downloader used via variable for easier swapping
 ytdlprint = 'yt-dlp' #sets the displayed downloader used via variable for easier swapping
 
-def clear():
-    if platform == 'win32' or platform == 'cygwin': #used to clear the screen on Windows
-        os.system('cls')
-    elif platform == 'linux' or platform == 'darwin': #used to clear the screen on Linux and Mac
-        os.system('clear')
-
-def CheckYTDL(): #checks if the set youtube downloader is present
-    if platform == 'Linux' or platform == 'darwin':
-        if os.path.exists(ytdl): #checks if a file with the downloader name exists in the same directory as the python script
-            return shutil.which(ytdl) is not None #returns True if the file is an executable
-        else:
-            return shutil.which(ytdl) is not None #returns true if the downloader can be launched, either from PATH or the same directory
-    else:
-        return shutil.which(ytdl) is not None #returns true if the downloader can be launched, either from PATH or the same directory
-
-def CheckFFmpeg(): #checks if ffmpeg is present
-    return shutil.which('ffmpeg') is not None
-
-def notvalid():
-    print('\nInput not valid, please try again')
-
-def downloadytdl(URL, filename): #downloader function for the youtube downloader
-    chunk_size = 1024 #sets chunk size for the stream
-    r = requests.get(URL, stream=True)
-    total_size = int(r.headers['content-length']) #sets total size to that of the content length from it's headers
-    try:
-        with open(filename, 'wb') as f:
-            for data in tqdm(iterable=r.iter_content(chunk_size=chunk_size), desc='Downloading', total=total_size/chunk_size, unit='KB'): #display progress bar as it's downloaded
-                f.write(data)
-        print('\nDownload complete!')
-        time.sleep(1.5)
-    except KeyboardInterrupt: #catch if the user uses the interrupt key, allowing for cleanup
-        print('Cleaning up...')
-        time.sleep(1)
-        os.remove(ytdl + '.exe')
-        print('Done!')
-        sys.exit(0)
-    else:
-        return True
-def downloadffmpeg(URL, localfile): #downloader function for ffmpeg
-    chunk_size = 1024 #sets chunk size for the stream
-    r = requests.get(URL, stream=True)
-    total_size = int(r.headers['content-length']) #sets total size to that of the content length from it's headers
-    try:
-        with open(localfile, 'wb') as f:
-            for data in  tqdm(iterable=r.iter_content(chunk_size=chunk_size), desc='Downloading', total=total_size/chunk_size, unit='KB'): #display progress bar as it's downloaded
-                f.write(data)
-        print('Download complete!')
-        time.sleep(1.5)
-    except KeyboardInterrupt: #catch if the user uses the interrupt key, allowing for cleanup
-        print('Cleaning up...')
-        time.sleep(1)
-        os.remove(localfile)
-        print('Done!')
-        sys.exit(0)
-    else:
-        return
-
-def ConvertToMP3(dest):
-    files = glob.glob(os.path.join(dest,'*.m4a'))
-    if not os.path.isdir(dest + ' MP3'):
-        os.makedirs(dest + ' MP3')
-    for file in files:
-        outputfile = Path(file).stem + '.mp3'
-        cmd = ['ffmpeg', '-n', '-i', file, '-b:a', '128k', os.path.join(dest + ' MP3', outputfile)]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
 errordetection = 0
 #check if the youtube downloader is present
 while True:
-    checkYT = CheckYTDL()
+    checkYT = CheckYTDL(ytdl)
     if not checkYT:
         while True:
             print(f'{ytdlprint} not found, please download it first')
@@ -104,22 +34,22 @@ while True:
                 if platform == 'win32' or platform == 'cygwin': #download if Windows or Cygwin
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
                     filename = ytdl + '.exe'
-                    if downloadytdl(URL, filename):
-                        break
+                    downloadytdl(URL, filename)
+                    break
 
                 elif platform == 'linux': #download if linux
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp'
                     filename = ytdl
-                    if downloadytdl(URL, filename):
-                        os.chmod(os.path.join(selfpath,ytdl), 0o700)
-                        break
+                    downloadytdl(URL, filename)
+                    os.chmod(os.path.join(selfpath,ytdl), 0o700)
+                    break
                         
                 elif platform == 'darwin': #download if MacOS
                     URL = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos'
                     filename = ytdl
-                    if downloadytdl(URL, filename):
-                        break
-
+                    downloadytdl(URL, filename)
+                    break
+                    
                 else:
                     print('\nError: OS not detected or supported. You will need to download it yourself')
                     time.sleep(3)
@@ -167,38 +97,31 @@ while True:
                 if downloadFFmpeg == 'Y':
                     if platform == 'win32' or platform == 'cygwin':
                         URL = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z'
-                        localfile = 'ffmpeg.7z'
-                        downloadffmpeg(URL, localfile)
+                        file = 'ffmpeg.7z'
+                        downloadffmpeg(URL, file)
                         print('\nExtracting...')
-                        cmd = ['bin/7zr.exe', 'e', localfile, 'ffmpeg.exe', '-r']
+                        cmd = ['bin/7zr.exe', 'e', file, 'ffmpeg.exe', '-r']
                         try:
                             subprocess.run(cmd)
-                            os.remove(localfile)
+                            os.remove(file)
                         except KeyboardInterrupt:
-                            print('Cleaning up...')
-                            time.sleep(1)
-                            os.remove(localfile)
-                            print('Done!')
-                            sys.exit(0)
+                            cleanupfiles(file)
                         else:
-                            print('\nExtraction done')
+                            print('\nExtraction done!')
+                            time.sleep(2)
                             break
                     elif platform == 'darwin':
                         URL = 'https://evermeet.cx/ffmpeg/getrelease/zip'
-                        localfile = 'ffmpeg.zip'
-                        downloadffmpeg(URL, localfile)
+                        file = 'ffmpeg.zip'
+                        downloadffmpeg(URL, file)
                         
                         print('\nExtracting...')
                         try:
-                            unzip = ZipFile(localfile)
+                            unzip = ZipFile(file)
                             unzip.extract(member='ffmpeg')
-                            os.remove(localfile)
+                            os.remove(file)
                         except KeyboardInterrupt:
-                            print('Cleaning up...')
-                            time.sleep(1)
-                            os.remove(localfile)
-                            print('Done!')
-                            sys.exit(0)
+                            cleanupfiles(file)
                         else:
                             print('\nExtraction done')
                             break
