@@ -5,6 +5,9 @@
 
 yt-dlp*
 ffmpeg*
+*.zip
+*.7z
+*.pyproj
 
 # User-specific files
 *.rsuser
