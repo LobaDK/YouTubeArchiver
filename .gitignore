@@ -8,6 +8,7 @@ ffmpeg*
 *.zip
 *.7z
 *.pyproj
+.venv
 
 # User-specific files
 *.rsuser
