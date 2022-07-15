@@ -258,15 +258,7 @@ while True:
                                 continue
                     else:
                         cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
-                    try:
-                        subprocess.run(cmd,check=True)
-                    except CalledProcessError:
-                        print(f'\nLooks like {ytdlprint} ran into an error. Please try again')
-                        badexit = True
-                        time.sleep(4)
-                        break
-                    except: #catch exception caused if user presses CTRL+C to stop the process
-                        pass
+                        subprocess.run(cmd)
                     while True:
                         converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                         if converttomp3 == 'Y':
