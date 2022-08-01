@@ -229,6 +229,7 @@ while True:
                             URLplaylist = input('\nURL is link to a playlist, do you wish to download the [E]ntire playlist, a [C]ustom range, or [S]ingle video? E/C/S: ').upper()
                             if URLplaylist == 'E':
                                 cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                subprocess.run(cmd)
                                 break
                             elif URLplaylist == 'C':
                                 try:
@@ -248,9 +249,11 @@ while True:
                                     time.sleep(2)
                                     continue
                                 cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','-I', str(playlistindexstart) + ':' + str(playlistindexend), '-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                subprocess.run(cmd)
                                 break
                             elif URLplaylist == 'S':
                                 cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','--no-playlist', '-f','bestaudio[ext=m4a]',dURL,'-o',output]
+                                subprocess.run(cmd)
                                 break
                             else:
                                 notvalid()
