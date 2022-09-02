@@ -6,7 +6,7 @@ import time
 from sys import platform
 from zipfile import ZipFile
 
-from functions import YTA
+from functions.functions import YTA
 
 
 class check:

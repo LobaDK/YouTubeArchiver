@@ -3,11 +3,11 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import warnings
 from pathlib import Path
 from sys import platform
-import threading
 
 import requests
 from tqdm import tqdm
@@ -105,7 +105,7 @@ class YTA:
             print('Done!')
             sys.exit(0)
 
-    def converttomp3(dest):
+    def convert(dest):
         while True:
             try:
                 threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
@@ -121,8 +121,9 @@ class YTA:
             threads = []
             print(f'\nConverting m4a to MP3, using {threadcount} thread(s)...')
             for _ in range(0,threadcount): #create user-defined amount of threads using a for loop
-                thread = threading.Thread(target=YTA.ConvertToMP3, args=(dest,))
+                thread = threading.Thread(target=YTA.ConvertToMP3(dest))
                 thread.start()
                 threads.append(thread)
             for jointhreads in threads:
                 jointhreads.join()
+            return
