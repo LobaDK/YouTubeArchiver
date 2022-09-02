@@ -3,7 +3,7 @@ import sys
 import time
 
 from functions.checks import check
-from functions.download import download
+from functions.download import Download
 from functions.functions import YTA
 
 try:
@@ -23,7 +23,6 @@ ytdl = check.ytdlcheck(selfpath, ytdl, ytdlprint)
 check.ffmpegcheck()
 
 #Main menu for the user
-returnmode = ""
 while True:
     badexit = False
     returntomenu = True
@@ -35,7 +34,7 @@ while True:
     print('\n[E]xit')
     mmchoice = input('\n: ').upper()
     if mmchoice == 'D':
-        download(ytdl, ytdlprint)
+        Download(ytdl, ytdlprint)
     elif mmchoice == 'A':
         #insert code for archiver
         pass
