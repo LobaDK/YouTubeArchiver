@@ -24,7 +24,6 @@ check.ffmpegcheck()
 
 #Main menu for the user
 while True:
-    badexit = False
     returntomenu = True
     YTA.clear()
     print(f'Using {ytdl}')
@@ -34,13 +33,13 @@ while True:
     print('\n[E]xit')
     mmchoice = input('\n: ').upper()
     if mmchoice == 'D':
-        Download(ytdl, ytdlprint)
+        Download.download(ytdl, ytdlprint, returntomenu)
     elif mmchoice == 'A':
         #insert code for archiver
         pass
     elif mmchoice == 'E':
         sys.exit()
-    elif mmchoice == 'DAE':
+    elif 'D' and 'A' and 'E' in mmchoice and len(mmchoice) == 3:
         print('\nhaha very funny')
         time.sleep(2)
         YTA.clear()
