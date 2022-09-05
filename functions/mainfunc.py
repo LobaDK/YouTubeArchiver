@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import threading
 from pathlib import Path
 from subprocess import CalledProcessError
 
@@ -182,7 +183,27 @@ class mainfunc:
                 while True:
                     converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                     if converttomp3 == 'Y':
-                        YTA.convert(dest)
+                        while True:
+                            try:
+                                threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
+                            except ValueError:
+                                YTA.notvalid()
+                                time.sleep(2)
+                                continue
+                            else:
+                                if threadcount <= 0:
+                                    YTA.notvalid()
+                                    time.sleep(2)
+                                    continue
+                            threads = []
+                            print(f'\nConverting m4a to MP3, using {threadcount} thread(s)...')
+                            for _ in range(0,threadcount): #create user-defined amount of threads using a for loop
+                                thread = threading.Thread(target=YTA.ConvertToMP3, args=(dest,))
+                                thread.start()
+                                threads.append(thread)
+                            for jointhreads in threads:
+                                jointhreads.join()
+                            break
                         break
                     elif converttomp3 == 'N':
                         break
@@ -216,7 +237,27 @@ class mainfunc:
                     while True:
                         converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                         if converttomp3 == 'Y':
-                            YTA.convert(dest)
+                            while True:
+                                try:
+                                    threadcount = int(input('\nPlease specify how many simultaneous conversions you want running: '))
+                                except ValueError:
+                                    YTA.notvalid()
+                                    time.sleep(2)
+                                    continue
+                                else:
+                                    if threadcount <= 0:
+                                        YTA.notvalid()
+                                        time.sleep(2)
+                                        continue
+                                threads = []
+                                print(f'\nConverting m4a to MP3, using {threadcount} thread(s)...')
+                                for _ in range(0,threadcount): #create user-defined amount of threads using a for loop
+                                    thread = threading.Thread(target=YTA.ConvertToMP3, args=(dest,))
+                                    thread.start()
+                                    threads.append(thread)
+                                for jointhreads in threads:
+                                    jointhreads.join()
+                                break
                             break
                         elif converttomp3 == 'N':
                             break
