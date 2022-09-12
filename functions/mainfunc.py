@@ -91,7 +91,7 @@ class mainfunc:
                         if reverseorder == 'Y':
                             playlistindexstart = int(input("\nPlease write the start index, e.g. 2nd last video in playlist would be '2': "))
                         else:
-                            playlistindexstart = int(input("\nPlease write the start index, e.g. 2nd last video in playlist would be '2': "))
+                            playlistindexstart = int(input("\nPlease write the start index, e.g. 2nd video in playlist would be '2': "))
                     except ValueError:
                         YTA.notvalid()
                         time.sleep(2)
@@ -281,12 +281,15 @@ class mainfunc:
                 continue
             break
 
-    def ArchiveType(dURL):
-        if 'www.youtube.com/c/' and '/videos' in dURL:
-            pass #youtube channel archive
-        elif '&list=' or '/playlist?list=' in dURL:
-            pass #youtube playlist archive
-        elif 'watch?v=' and not '&list=' in dURL:
-            pass #youtube single video archive
-        else:
-            pass #not able to detect the ArchiveType
+    def ArchiveType(dURL, ytdl, dest, archivelist):
+        while True:
+            if 'www.youtube.com/c/' and '/videos' in dURL:
+                mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
+                pass #youtube channel archive
+            elif '&list=' or '/playlist?list=' in dURL:
+                mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
+                pass #youtube playlist archive
+            elif 'watch?v=' and not '&list=' in dURL:
+                pass #youtube single video archive
+            else:
+                pass #not able to detect the ArchiveType

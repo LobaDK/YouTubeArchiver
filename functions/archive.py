@@ -19,10 +19,7 @@ class Archive():
             if returntomenu:
                 archivelist = mainfunc.SelectArchive(ytdlprint)
 
-            mainfunc.ArchiveType(dURL)
-
-            if "&list=" in dURL:
-                cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
+            cmd = mainfunc.ArchiveType(dURL, ytdl, dest, archivelist)
                 
             else:
                 cmd = mainfunc.NoYouTubePlaylist(ytdl, dest, archivelist)
