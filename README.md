@@ -1,5 +1,5 @@
 # Installing
-Clone the project or grab the `YouTubeArchiver.py` and `functions.py` python files, as well as the `bin` folder and it's contents if you do not have FFmpeg installed, and wish the script to do it for you. It is required to extract the 7z FFmpeg download.
+Clone the project or grab the `YouTubeArchiver.py` and `functions` folder with it's contents, as well as the `bin` folder and it's contents if you do not have FFmpeg installed, and wish the script to do it for you. It is required to extract the 7z FFmpeg download.
 
 FFmpeg and (obviously) a YouTube downloader is required, and can be installed either via PATH or by putting them in the same directory as the python script is located.
 This has been tested with youtube-dl, yt-dlc and yt-dlp, though is geared towards the latter considering it's the only properly working one it seems.
