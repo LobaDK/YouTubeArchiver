@@ -4,6 +4,7 @@ import time
 
 from functions.checks import check
 from functions.download import Download
+from functions.archive import Archive
 from functions.functions import YTA
 
 try:
@@ -35,8 +36,7 @@ while True:
     if mmchoice == 'D':
         Download.download(ytdl, ytdlprint, returntomenu)
     elif mmchoice == 'A':
-        #insert code for archiver
-        pass
+        Archive.archive(ytdl, ytdlprint, returntomenu)
     elif mmchoice == 'E':
         sys.exit()
     elif 'D' and 'A' and 'E' in mmchoice and len(mmchoice) == 3:

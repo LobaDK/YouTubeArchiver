@@ -8,6 +8,7 @@ from functions.mainfunc import mainfunc
 class Download():
 
     def download(ytdl, ytdlprint, returntomenu):
+        mode = 'download'
         while True:
 
             dURL = mainfunc.SelectURL()
@@ -18,8 +19,9 @@ class Download():
             if returntomenu:
                 archivelist = mainfunc.SelectArchive(ytdlprint)
 
-            if "&list=" in dURL:
-                cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
+            if '&list=' or 'playlist?list=' in dURL:
+                link_type = 'playlist'
+                cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
                 
             else:
                 cmd = mainfunc.NoYouTubePlaylist(ytdl, dest, archivelist)
@@ -29,10 +31,11 @@ class Download():
                 if testprompt == 'N':
                     return
             
+            output_template = '%(title)s.%(ext)s'
 
-            output = mainfunc.CreateDirectoryAndOutput(dest, path)
+            output = mainfunc.CreateDirectoryAndOutput(dest, path, output_template)
             
-            mainfunc.DownloadMode(dURL, output, cmd, dest)
+            mainfunc.DownloadMode(dURL, output, cmd, dest, mode)
             
             while True:
                 returnmode = input('\n[E]xit, return to [M]ain menu or to [I]nput field using previous settings? E/M/I: ').upper()

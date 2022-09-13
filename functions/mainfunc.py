@@ -46,13 +46,22 @@ class mainfunc:
                     continue
                 return archivelist
 
-    def YouTubePlaylist(ytdl, dest, archivelist):
+    def YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL):
         while True:
-            URLplaylist = input('\nURL is link to a playlist, do you wish to download the [E]ntire playlist, a [C]ustom range, or [S]ingle video? E/C/S: ').upper()
+            if link_type == 'playlist':
+                if '&list=' in dURL:
+                    URLplaylist = input('\nURL is link to a playlist, do you wish to download the [E]ntire playlist, a [C]ustom range, or [S]ingle video? E/C/S: ').upper()
+                elif 'playlist?list=' in dURL:
+                    URLplaylist = input('\nURL is link to a playlist, do you wish to download the [E]ntire playlist, or [C]ustom range? E/C: ').upper()
+            else:
+                URLplaylist = input('\nURL is link to a channel, do you wish to download the [E]ntire channel, or [C]ustom range? E/C: ').upper()
             if URLplaylist == 'E':
                 cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata', '--yes-playlist']
                 while True:
-                    playlistoptions = input('\nDownload in [R]andom order, R[E]verse order, [S]kip playlist indexing and start download immediately, or [N]one? R/E/S/N: ').upper()
+                    if link_type == 'playlist':
+                        playlistoptions = input('\nDownload in [R]andom order, R[E]verse order, [S]kip playlist indexing and start download immediately, or [N]one? R/E/S/N: ').upper()
+                    else:
+                        playlistoptions = input('\nDownload in [R]andom order, R[E]verse order, [S]kip channel indexing and start download immediately, or [N]one? R/E/S/N: ').upper()
                     if playlistoptions == 'R':
                         playlistcustom = '--playlist-random'
                         cmd.append(playlistcustom)
@@ -122,7 +131,7 @@ class mainfunc:
                     
                     cmd.extend(['-I', playlistindex])
                     return cmd
-            elif URLplaylist == 'S':
+            elif URLplaylist == 'S' and link_type == 'playlist' and not 'playlist?list=' in dURL:
                 cmd = [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata','--no-playlist']
                 return cmd
             else:
@@ -131,7 +140,7 @@ class mainfunc:
                 continue
 
     def NoYouTubePlaylist(ytdl, dest , archivelist):
-        return [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata']
+        return [ytdl,'--download-archive',dest + os.sep + archivelist + '.txt','-i','--add-metadata', '--compat-options', 'no-live-chat']
 
     def Test(ytdl, dest, path, dURL):
         while True:
@@ -163,12 +172,12 @@ class mainfunc:
                 time.sleep(2)
                 continue
 
-    def CreateDirectoryAndOutput(dest, path):
-        output = dest + os.sep + '%(title)s.%(ext)s' #combine user-defined directory with the variable names used in yt-dlp
+    def CreateDirectoryAndOutput(dest, path, output_template):
+        output = dest + os.sep + output_template #combine user-defined directory with the variable names used in yt-dlp
         path.mkdir(parents=True, exist_ok=True) #create directory if it does not exist, including any missing parents
         return output
 
-    def DownloadMode(dURL, output, cmd, dest):
+    def DownloadMode(dURL, output, cmd, dest, mode):
         while True:
             downloadmode = input('\nA for only audio, V for only video, and AV for both, with option to separate audio from video. A/V/AV: ').upper()
             if downloadmode == 'A': #code to download only audio
@@ -180,6 +189,8 @@ class mainfunc:
                     pass
                 except Exception as e:
                     print(e)
+                if mode == 'archive':
+                    break
                 while True:
                     converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                     if converttomp3 == 'Y':
@@ -227,13 +238,14 @@ class mainfunc:
                     break
                 
                 cmd.extend(cmd2)
+                print(' '.join(cmd))
                 try:
                     subprocess.run(cmd, check=True)
                 except KeyboardInterrupt: #catch exception caused if user presses CTRL+C to stop the process
                     pass
                 except Exception as e:
                     print(e)
-                if audio_extract == 'Y':
+                if audio_extract == 'Y' and mode == 'download':
                     while True:
                         converttomp3 = input('\nWould you like to convert the audio files to MP3? Y/N: \nNote: This will immediately start converting any m4a files in the destination folder, to MP3\'s: ').upper()
                         if converttomp3 == 'Y':
@@ -284,12 +296,14 @@ class mainfunc:
     def ArchiveType(dURL, ytdl, dest, archivelist):
         while True:
             if 'www.youtube.com/c/' and '/videos' in dURL:
-                mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
-                pass #youtube channel archive
+                link_type = 'channel'
+                cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
+                return cmd, link_type
             elif '&list=' or '/playlist?list=' in dURL:
-                mainfunc.YouTubePlaylist(ytdl, dest, archivelist)
-                pass #youtube playlist archive
+                link_type = 'playlist'
+                cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
+                return cmd, link_type
             elif 'watch?v=' and not '&list=' in dURL:
-                pass #youtube single video archive
+                cmd = mainfunc.NoYouTubePlaylist(ytdl, dest , archivelist)
             else:
                 pass #not able to detect the ArchiveType
