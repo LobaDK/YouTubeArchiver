@@ -19,7 +19,7 @@ class Download():
             if returntomenu:
                 archivelist = mainfunc.SelectArchive(ytdlprint)
 
-            if '&list=' or 'playlist?list=' in dURL:
+            if any(x in dURL for x in('&list', 'playlist?list=')):
                 link_type = 'playlist'
                 cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
                 
