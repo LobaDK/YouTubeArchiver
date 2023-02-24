@@ -295,15 +295,18 @@ class mainfunc:
 
     def ArchiveType(dURL, ytdl, dest, archivelist):
         while True:
-            if 'www.youtube.com/c/' and '/videos' in dURL:
+            if 'www.youtube.com/c/' in dURL and '/videos' in dURL:
                 link_type = 'channel'
                 cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
                 return cmd, link_type
-            elif '&list=' or '/playlist?list=' in dURL:
+            elif '&list=' in dURL or '/playlist?list=' in dURL:
                 link_type = 'playlist'
                 cmd = mainfunc.YouTubePlaylist(ytdl, dest, archivelist, link_type, dURL)
                 return cmd, link_type
-            elif 'watch?v=' and not '&list=' in dURL:
+            elif 'watch?v=' in dURL and not '&list=' in dURL:
+                link_type = 'single'
                 cmd = mainfunc.NoYouTubePlaylist(ytdl, dest , archivelist)
+                return cmd, link_type
             else:
-                pass #not able to detect the ArchiveType
+                print('Could not detect if link is to channel, playlist, direct with playlist, or direct')
+                exit(1) #not able to detect the ArchiveType
