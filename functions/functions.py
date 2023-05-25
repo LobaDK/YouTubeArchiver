@@ -73,7 +73,7 @@ class YTA:
             return
 
     def ConvertToMP3(dest):
-        files = glob.glob(os.path.join(dest,'*.m4a'))
+        files = sorted(glob.glob(os.path.join(dest,'*.m4a')), key=os.path.getmtime, reverse=True)
         try:
             os.makedirs(dest + ' MP3')
         except:
