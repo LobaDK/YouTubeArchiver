@@ -1,54 +1,100 @@
 import os
 import sys
-import time
+import logging
+from lib import logging_helper, misc, installation_helper
 
-from functions.checks import check
-from functions.download import Download
-from functions.archive import Archive
-from functions.functions import YTA
 
-try:
-    os.chdir(os.path.dirname(__file__))
-except OSError:
-    os.chdir(os.path.dirname(sys.argv[0]))
-try:
-    # attempts to get the scripts own directory
-    selfpath = os.path.dirname(os.path.realpath(__file__))
-except OSError:
-    # runs this instead if script is used inside py2exe
-    selfpath = os.path.dirname(os.path.abspath(sys.argv[0]))
+class Settings:
+    try:
+        ffmpeg_is_installed = misc.ffmpeg_is_installed()
+    except Exception:
+        ffmpeg_is_installed = False
 
-ytdl = "yt-dlp"  # sets the downloader used via variable for easier swapping
-ytdlprint = (
-    "yt-dlp"  # sets the displayed downloader used via variable for easier swapping
+
+relative_path = os.path.dirname(os.path.abspath(__file__))
+os.chdir(relative_path)
+
+LOG_NAME = "YouTubeArchiver"
+LOG_FILE = "YouTubeArchiver.log"
+
+logger = logging_helper.create_logger(
+    logging_helper.FileAndStreamHandler(
+        logger_name=LOG_NAME,
+        log_file=LOG_FILE,
+        file_log_level=logging.DEBUG,
+        stream_log_level=logging.INFO,
+    )
 )
 
-ytdl = check.ytdlcheck(selfpath, ytdl, ytdlprint)
+installation_helper = installation_helper.InstallationHelper(
+    logging_helper.FileAndStreamHandler(logger_name=LOG_NAME, log_file=LOG_FILE)
+)
 
-check.ffmpegcheck()
+logger.debug(f"Changed working directory to {relative_path}")
+
+settings = Settings()
+
+try:
+    import yt_dlp  # noqa We need to check if yt-dlp is installed
+except ImportError:
+    logger.error(
+        "yt-dlp is not installed. Please install it using `pip install yt-dlp`"
+    )
+    sys.exit(1)
+
+if settings.ffmpeg_is_installed is False:
+    logger.warning(
+        "ffmpeg is not installed. It is not required, but it is highly recommended to have it installed."
+    )
+    option = input("Do you want to download ffmpeg now? (Y/n): ").lower() or "y"
+    if option == "y":
+        logger.debug("User chose to download ffmpeg.")
+        if not sys.platform == "linux":
+            try:
+                installation_helper.download_ffmpeg()
+                settings.ffmpeg_is_installed = True
+            except Exception:
+                logger.error(
+                    "An error occurred while downloading ffmpeg.", exc_info=True
+                )
+                option = (
+                    input("Do you want to continue without ffmpeg? (Y/n): ").lower()
+                    or "n"
+                )
+                if option == "n":
+                    sys.exit(1)
+        else:
+            logger.warning(
+                "Automatic installation of ffmpeg is not supported on Linux. Please install it manually using your package manager."
+            )
+    else:
+        logger.debug("User chose not to download ffmpeg.")
+
+
+main_menu_text = f"""
+Welcome to YouTube Archiver!
+FFmpeg detected: {settings.ffmpeg_is_installed}
+\nPlease select an option
+\n[D]ownload
+\n[A]rchive
+\n[U]pdate
+\n[E]xit
+"""
+
+options = {
+    "D": "Download",
+    "A": "Archive",
+    "U": installation_helper.update_ytdlp,
+    "E": sys.exit,
+}
+
 
 # Main menu for the user
 while True:
-    returntomenu = True
-    YTA.clear()
-    print(f"Using {ytdl}")
-    print("Please select an option")
-    print("\n[D]ownload")
-    print("\n[A]rchive")
-    print("\n[E]xit")
-    mmchoice = input("\n: ").upper()
-    if mmchoice == "D":
-        Download.download(ytdl, ytdlprint, returntomenu)
-    elif mmchoice == "A":
-        Archive.archive(ytdl, ytdlprint, returntomenu)
-    elif mmchoice == "E":
-        sys.exit()
-    elif "D" and "A" and "E" in mmchoice and len(mmchoice) == 3:
-        print("\nhaha very funny")
-        time.sleep(2)
-        YTA.clear()
-        continue
+    misc.clear()
+    print(main_menu_text)
+    option = input("Enter your choice: ").upper()
+    if option in options:
+        options[option]()
     else:
-        YTA.notvalid()
-        time.sleep(2)
-        continue
+        misc.not_valid_input(option)
