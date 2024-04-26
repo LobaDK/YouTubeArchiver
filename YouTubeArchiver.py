@@ -1,14 +1,8 @@
 import os
 import sys
 import logging
-from lib import logging_helper, misc, installation_helper
-
-
-class Settings:
-    try:
-        ffmpeg_is_installed = misc.ffmpeg_is_installed()
-    except Exception:
-        ffmpeg_is_installed = False
+import time
+from lib import logging_helper, misc, installation_helper, settings, menu
 
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +26,8 @@ installation_helper = installation_helper.InstallationHelper(
 
 logger.debug(f"Changed working directory to {relative_path}")
 
-settings = Settings()
+settings = settings.Settings()
+settings.logger = logger
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
@@ -40,6 +35,7 @@ except ImportError:
     logger.error(
         "yt-dlp is not installed. Please install it using `pip install yt-dlp`"
     )
+    time.sleep(3)
     sys.exit(1)
 
 if settings.ffmpeg_is_installed is False:
@@ -82,8 +78,12 @@ FFmpeg detected: {settings.ffmpeg_is_installed}
 """
 
 options = {
-    "D": "Download",
-    "A": "Archive",
+    "D": lambda: menu.menu(
+        menu.MenuParam(settings=settings, download_type=menu.DownloadType.DOWNLOAD)
+    ),
+    "A": lambda: menu.menu(
+        menu.MenuParam(settings=settings, download_type=menu.DownloadType.ARCHIVE)
+    ),
     "U": installation_helper.update_ytdlp,
     "E": sys.exit,
 }
