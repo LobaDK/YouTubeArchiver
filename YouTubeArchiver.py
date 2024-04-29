@@ -8,21 +8,20 @@ from lib import logging_helper, misc, installation_helper, settings, menu
 relative_path = os.path.dirname(os.path.abspath(__file__))
 os.chdir(relative_path)
 
-LOG_NAME = "YouTubeArchiver"
-LOG_FILE = "YouTubeArchiver.log"
+LOGGER_NAME = "YouTubeArchiver"
+LOG_FILE = "log.log"
 
-logger = logging_helper.create_logger(
-    logging_helper.FileAndStreamHandler(
-        logger_name=LOG_NAME,
-        log_file=LOG_FILE,
-        file_log_level=logging.DEBUG,
-        stream_log_level=logging.INFO,
-    )
+log_helper = logging_helper.LoggingHelper(
+    logger_name=LOGGER_NAME,
+    log_file=LOG_FILE,
+    file_log_level=logging.DEBUG,
+    stream_log_level=logging.INFO,
+    include_timestamp=False,
 )
 
-installation_helper = installation_helper.InstallationHelper(
-    logging_helper.FileAndStreamHandler(logger_name=LOG_NAME, log_file=LOG_FILE)
-)
+logger = log_helper.create_logger()
+
+installation_helper = installation_helper.InstallationHelper(logger)
 
 logger.debug(f"Changed working directory to {relative_path}")
 
@@ -33,7 +32,7 @@ try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
 except ImportError:
     logger.error(
-        "yt-dlp is not installed. Please install it using `pip install yt-dlp`"
+        "yt-dlp is not installed. Please install it using `pip install yt-dlp` or `pip install -r requirements.txt`."
     )
     time.sleep(3)
     sys.exit(1)
@@ -65,6 +64,8 @@ if settings.ffmpeg_is_installed is False:
             )
     else:
         logger.debug("User chose not to download ffmpeg.")
+else:
+    logger.debug("ffmpeg is installed and detected.")
 
 
 main_menu_text = f"""
@@ -77,6 +78,7 @@ FFmpeg detected: {settings.ffmpeg_is_installed}
 \n[E]xit
 """
 
+# Options for the main menu.
 options = {
     "D": lambda: menu.menu(
         menu.MenuParam(settings=settings, download_type=menu.DownloadType.DOWNLOAD)
