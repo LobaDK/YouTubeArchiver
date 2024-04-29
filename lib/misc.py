@@ -2,6 +2,50 @@ import sys
 import os
 import time
 import shutil
+import logging
+from pathlib import Path
+
+from .menu import Choice
+
+
+def create_folder(folder: Path, logger: logging.Logger):
+    """
+    Create a folder at the specified path.
+
+    Args:
+        folder (Path): The path of the folder to create.
+        logger (logging.Logger): The logger object for logging messages.
+
+    Returns:
+        bool: True if the folder was created successfully, False otherwise.
+    """
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Created folder: {str(folder)}")
+        return True
+    except (OSError, PermissionError, NotADirectoryError):
+        logger.error(
+            "An error occurred while creating the folder. Please refer to the logs if this continues.",
+            exc_info=True,
+        )
+        return False
+
+
+def get_user_input(prompt: str, default: str = Choice.YES.value, lower: bool = True):
+    """
+    Prompts the user for input with the given prompt and returns the user's input.
+    If the user enters an empty string, the default value is returned instead.
+
+    Args:
+        prompt (str): The prompt to display to the user.
+        default (str, optional): The default value to return if the user enters an empty string.
+            Defaults to Choice.YES.value.
+        lower (bool, optional): Whether to convert the user's input to lowercase. Defaults to True.
+
+    Returns:
+        str: The user's input or the default value if the user enters an empty string.
+    """
+    return (input(prompt) or default).lower() if lower else input(prompt) or default
 
 
 def clear():
@@ -45,4 +89,10 @@ def ffmpeg_is_installed():
     Returns:
         bool: True if ffmpeg is installed, False otherwise.
     """
-    return any([shutil.which("ffmpeg"), shutil.which("bin/ffmpeg")])
+    return any(
+        [
+            shutil.which("ffmpeg") is not None,
+            os.path.isfile("bin/ffmpeg"),
+            os.path.isfile("bin/ffmpeg.exe"),
+        ]
+    )
