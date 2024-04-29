@@ -1,7 +1,4 @@
-certifi==2023.7.22
-charset-normalizer==2.1.0
-colorama==0.4.5
-idna==3.3
-requests==2.31.0
+pydantic==2.7.1
+Requests==2.31.0
 tqdm==4.64.0
-urllib3==1.26.18
+yt_dlp==2024.4.9
