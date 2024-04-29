@@ -1,223 +1,164 @@
-"""
-This module provides classes and functions for managing logging in Python applications.
-
-It includes functionality to check if a logger exists, create a logger with a file handler and a stream handler,
-and create file and stream handlers with specified log levels.
-
-Classes:
-    HandlerBase: A base class for handler configuration.
-        Attributes:
-            logger_name (str): The name of the logger.
-            log_file (str): The path and name of the log file.
-
-    FileAndStreamHandler: A class for file and stream handler configuration, inherits from HandlerBase.
-        Attributes:
-            file_log_level (int, optional): The log level for the file handler. Defaults to logging.INFO.
-            stream_log_level (int, optional): The log level for the stream handler. Defaults to logging.ERROR.
-
-    TimedRotatingFileAndStreamHandler: A class for timed rotating file and stream handler configuration, inherits from FileAndStreamHandler.
-        Attributes:
-            interval (str, optional): The interval at which log files should be rotated (e.g., 'midnight', 'daily', 'weekly', 'monthly'). Defaults to 'midnight'.
-            backup_count (int, optional): The number of backup log files to keep. Defaults to 7.
-
-Functions:
-    logger_exists(logger_name: str) -> bool:
-        Checks if a logger with the given name exists.
-
-    create_logger(log: FileAndStreamHandler | TimedRotatingFileAndStreamHandler) -> logging.Logger:
-        Creates a logger with the given name and log file.
-
-    _create_file_handler(log_file: str, level: int) -> logging.FileHandler:
-        Creates a logging FileHandler with the specified log file and level.
-
-    _create_stream_handler(level: int) -> logging.StreamHandler:
-        Creates a logging StreamHandler with the specified log level.
-
-    _create_timed_rotating_file_handler(log_file: str, level: int, interval: str, backup_count: int) -> TimedRotatingFileHandler:
-        Creates a logging TimedRotatingFileHandler with the specified log file, level, interval, and backup count.
-
-    create_log_dir(log_dir: str):
-        Creates a log directory if it does not exist.
-
-example:
-    logger = logging_helper.create_logger(
-        logging_helper.FileAndStreamHandler(
-            logger_name="ExampleLogger",
-            log_file="example.log",
-            file_log_level=logging.DEBUG,
-        )
-    )
-    logger.debug("This is a debug message.")
-    logger.info("This is an info message.")
-    logger.warning("This is a warning message.")
-    logger.error("This is an error message.")
-    logger.critical("This is a critical message.")
-"""
-
 import logging
-from pydantic import BaseModel
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 import os
-from typing import Optional
 
 
-class HandlerBase(BaseModel):
-    logger_name: str
-    log_file: str
-
-
-class FileAndStreamHandler(HandlerBase):
-    file_log_level: Optional[int] = logging.INFO
-    stream_log_level: Optional[int] = logging.ERROR
-
-
-class TimedRotatingFileAndStreamHandler(FileAndStreamHandler):
-    interval: Optional[str] = "midnight"
-    backup_count: Optional[int] = 7
-
-
-def logger_exists(logger_name: str) -> bool:
+class LoggingHelper:
     """
-    Checks if a logger with the given name exists.
+    A helper class for creating and configuring loggers.
 
-    Args:
-        logger_name (str): The name of the logger to check.
-
-    Returns:
-        bool: True if a logger with the given name exists, False otherwise.
+    This class provides methods to create and configure loggers with file and stream handlers.
+    It also supports creating log directories and checking if a logger with a specified name exists.
     """
-    return logger_name in logging.Logger.manager.loggerDict
 
+    def __init__(
+        self,
+        logger_name: str,
+        log_file: str,
+        include_timestamp: bool = True,
+        log_level_left_padding: int = 0,
+        file_log_level: int = logging.INFO,
+        stream_log_level: int = logging.ERROR,
+        interval: str = "midnight",
+        backup_count: int = 7,
+    ):
+        self.logger_name = logger_name
+        self.log_file = log_file
+        self.include_timestamp = include_timestamp
+        self.log_level_left_padding = log_level_left_padding
+        self.file_log_level = file_log_level
+        self.stream_log_level = stream_log_level
+        self.interval = interval
+        self.backup_count = backup_count
 
-def create_logger(
-    log: FileAndStreamHandler | TimedRotatingFileAndStreamHandler,
-) -> logging.Logger:
-    """
-    Creates a logger with the given name and log file.
+    def logger_exists(self) -> bool:
+        """
+        Check if the logger with the specified name exists.
 
-    Helper function to create, configure, and return a logger with the given name and log file.
-    The logger will have a file handler and a stream handler attached to it.
-    If the logger already exists, it will be returned without any changes.
+        Returns:
+            bool: True if the logger exists, False otherwise.
+        """
+        return self.logger_name in logging.Logger.manager.loggerDict
 
-    Args:
-        log (FileAndStreamHandler | TimedRotatingFileAndStreamHandler): The log object containing the logger name and log file.
+    def create_logger(self) -> logging.Logger:
+        """
+        Creates a logger with the given name and log file.
 
-    Returns:
-        logging.Logger: The created logger.
-    """
-    if not Path(log.log_file).parent.exists():
-        create_log_dir(str(Path(log.log_file).parent))
+        Helper function to create, configure, and return a logger with the given name and log file.
+        The logger will have a file handler and a stream handler attached to it.
+        If the logger already exists, it will be returned without any changes.
+        if the interval is specified, a TimedRotatingFileHandler will be created instead of a FileHandler.
 
-    if logger_exists(log.logger_name):
-        return logging.getLogger(log.logger_name)
+        Returns:
+            logging.Logger: The created logger.
+        """
+        if not Path(self.log_file).parent.exists():
+            self.create_log_dir(str(Path(self.log_file).parent))
 
-    logger = logging.getLogger(log.logger_name)
-    logger.setLevel(logging.DEBUG)
+        if self.logger_exists():
+            return logging.getLogger(self.logger_name)
 
-    stream_handler = _create_stream_handler(log.stream_log_level)
-    logger.addHandler(stream_handler)
+        logger = logging.getLogger(self.logger_name)
+        logger.setLevel(logging.DEBUG)
 
-    if isinstance(log, FileAndStreamHandler):
-        file_handler = _create_file_handler(log.log_file, log.file_log_level)
+        stream_handler = self._create_stream_handler()
+        logger.addHandler(stream_handler)
+
+        if self.interval:
+            file_handler = self._create_timed_rotating_file_handler()
+        else:
+            file_handler = self._create_file_handler()
         logger.addHandler(file_handler)
-    elif isinstance(log, TimedRotatingFileAndStreamHandler):
-        timed_rotating_file_handler = _create_timed_rotating_file_handler(
-            log.log_file,
-            log.file_log_level,
-            log.interval,
-            log.backup_count,
+
+        return logger
+
+    def _create_file_handler(self) -> logging.FileHandler:
+        """
+        Creates a logging FileHandler with the specified log file and level.
+
+        Returns:
+            logging.FileHandler: The file handler object.
+
+        """
+        handler = logging.FileHandler(
+            filename=self.log_file,
+            encoding="utf-8",
+            mode="a",
         )
-        logger.addHandler(timed_rotating_file_handler)
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            self._format_builder(),
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.file_log_level)
+        return handler
 
-    return logger
+    def _create_stream_handler(self) -> logging.StreamHandler:
+        """
+        Creates a logging StreamHandler with the specified log level.
 
+        Returns:
+            logging.StreamHandler: The created StreamHandler object.
 
-def _create_file_handler(log_file: str, level: int) -> logging.FileHandler:
-    """
-    Creates a logging FileHandler with the specified log file and level.
+        """
+        handler = logging.StreamHandler()
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            self._format_builder(),
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.stream_log_level)
+        return handler
 
-    Args:
-        log_file (str): The path and name of the log file to create.
+    def _create_timed_rotating_file_handler(self) -> TimedRotatingFileHandler:
+        """
+        Creates a logging TimedRotatingFileHandler with the specified log file, level, interval, and backup count.
 
-    Returns:
-        logging.FileHandler: The file handler object.
+        Returns:
+            logging.handlers.TimedRotatingFileHandler: The created TimedRotatingFileHandler object.
+        """
+        handler = TimedRotatingFileHandler(
+            filename=self.log_file,
+            when=self.interval,
+            backupCount=self.backup_count,
+            encoding="utf-8",
+        )
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            "[{asctime}] [{levelname:<8}] {name}: {message}",
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.file_log_level)
+        return handler
 
-    """
-    handler = logging.FileHandler(
-        filename=log_file,
-        encoding="utf-8",
-        mode="a",
-    )
-    date_format = "%Y-%m-%d %H:%M:%S"
-    formatter = logging.Formatter(
-        "[{asctime}] [{levelname:<8}] {name}: {message}",
-        datefmt=date_format,
-        style="{",
-    )
-    handler.setFormatter(formatter)
-    handler.setLevel(level)
-    return handler
+    def _format_builder(self) -> str:
+        """
+        Builds the format string for the logger.
 
+        Returns:
+            str: The format string for the logger.
+        """
+        format_string = ""
+        if self.include_timestamp:
+            format_string += "[{asctime}] "
+        format_string += (
+            "[{levelname:<" + str(self.log_level_left_padding) + "}] {name}: {message}"
+        )
+        return format_string
 
-def _create_stream_handler(level: int) -> logging.StreamHandler:
-    """
-    Creates a logging StreamHandler with the specified log level.
+    def create_log_dir(self):
+        """
+        Creates a log directory if it does not exist.
 
-    Returns:
-        logging.StreamHandler: The created StreamHandler object.
+        Args:
+            log_dir (str): The path to the log directory.
 
-    """
-    handler = logging.StreamHandler()
-    date_format = "%Y-%m-%d %H:%M:%S"
-    formatter = logging.Formatter(
-        "[{asctime}] [{levelname:<8}] {name}: {message}",
-        datefmt=date_format,
-        style="{",
-    )
-    handler.setFormatter(formatter)
-    handler.setLevel(level)
-    return handler
-
-
-def _create_timed_rotating_file_handler(
-    log_file: str, level: int, interval: str, backup_count: int
-) -> TimedRotatingFileHandler:
-    """
-    Creates a logging TimedRotatingFileHandler with the specified log file, level, interval, and backup count.
-
-    Args:
-        log_file (str): The path and name of the log file to create.
-        level (int): The log level for the file handler.
-        interval (str): The interval at which log files should be rotated (e.g., 'midnight', 'daily', 'weekly', 'monthly').
-        backup_count (int): The number of backup log files to keep.
-
-    Returns:
-        logging.handlers.TimedRotatingFileHandler: The created TimedRotatingFileHandler object.
-    """
-    handler = TimedRotatingFileHandler(
-        filename=log_file,
-        when=interval,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
-    date_format = "%Y-%m-%d %H:%M:%S"
-    formatter = logging.Formatter(
-        "[{asctime}] [{levelname:<8}] {name}: {message}",
-        datefmt=date_format,
-        style="{",
-    )
-    handler.setFormatter(formatter)
-    handler.setLevel(level)
-    return handler
-
-
-def create_log_dir(log_dir: str):
-    """
-    Creates a log directory if it does not exist.
-
-    Args:
-        log_dir (str): The path to the log directory.
-
-    """
-    os.makedirs(log_dir, exist_ok=True)
+        """
+        os.makedirs(str(Path(self.log_file).parent), exist_ok=True)

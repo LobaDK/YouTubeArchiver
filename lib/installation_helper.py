@@ -6,10 +6,10 @@ import tqdm
 import time
 import subprocess
 import shutil
+import logging
 from pathlib import Path
 
-from .logging_helper import create_logger, FileAndStreamHandler
-from .misc import ffmpeg_is_installed
+from lib.misc import ffmpeg_is_installed
 
 
 class InstallationHelper:
@@ -27,8 +27,8 @@ class InstallationHelper:
     Note: This class relies on the `zipfile`, `os`, `shutil`, `requests`, `sys`, and `tqdm` modules.
     """
 
-    def __init__(self, log: FileAndStreamHandler) -> None:
-        self.logger = create_logger(log)
+    def __init__(self, logger: logging.Logger) -> None:
+        self.logger = logger
 
     def extract_file(self, from_file: str, to_dir: str):
         """
