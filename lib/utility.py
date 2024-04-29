@@ -5,10 +5,28 @@ import shutil
 import logging
 from pathlib import Path
 
-from .menu import Choice
+from lib.menu import Choice
+from lib import logging_helper, installation_helper
+
+LOGGER_NAME = "YouTubeArchiver"
+LOG_FILE = "log.log"
+
+# Create a logger in the utility module so we can import and use it in other modules.
+log_helper = logging_helper.LoggingHelper(
+    logger_name=LOGGER_NAME,
+    log_file=LOG_FILE,
+    file_log_level=logging.DEBUG,
+    stream_log_level=logging.INFO,
+    include_timestamp=False,
+)
+
+logger = log_helper.create_logger()
+
+# Create an installation helper object in the utility module so we can import and use it in other modules.
+installation_helper = installation_helper.InstallationHelper(logger)
 
 
-def create_folder(folder: Path, logger: logging.Logger):
+def create_folder(folder: Path):
     """
     Create a folder at the specified path.
 

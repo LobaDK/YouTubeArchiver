@@ -6,28 +6,27 @@ import tqdm
 import time
 import subprocess
 import shutil
-import logging
 from pathlib import Path
 
 from lib.utility import ffmpeg_is_installed
+from lib.utility import logger
 
 
 class InstallationHelper:
     """
     Helper class for installation-related tasks.
 
-    This class provides methods for extracting compressed files and downloading the ffmpeg executable.
+    This class provides methods for extracting compressed files, downloading ffmpeg,
+    and updating yt-dlp to the latest version.
 
-    Args:
-        log (logging_helper.FileAndStreamHandler): The log file and stream handler.
-
-    Attributes:
-        logger: The logger instance for logging messages.
-
-    Note: This class relies on the `zipfile`, `os`, `shutil`, `requests`, `sys`, and `tqdm` modules.
+    Example usage:\n
+    helper = InstallationHelper()\n
+    helper.extract_file("ffmpeg.zip", "bin")\n
+    helper.download_ffmpeg()\n
+    helper.update_ytdlp()
     """
 
-    def __init__(self, logger: logging.Logger) -> None:
+    def __init__(self) -> None:
         self.logger = logger
 
     def extract_file(self, from_file: str, to_dir: str):

@@ -1,32 +1,16 @@
 import os
 import sys
-import logging
 import time
-from lib import logging_helper, installation_helper, settings, menu, utility
+from lib import settings, menu, utility
+from lib.utility import logger, installation_helper
 
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
 os.chdir(relative_path)
 
-LOGGER_NAME = "YouTubeArchiver"
-LOG_FILE = "log.log"
-
-log_helper = logging_helper.LoggingHelper(
-    logger_name=LOGGER_NAME,
-    log_file=LOG_FILE,
-    file_log_level=logging.DEBUG,
-    stream_log_level=logging.INFO,
-    include_timestamp=False,
-)
-
-logger = log_helper.create_logger()
-
-installation_helper = installation_helper.InstallationHelper(logger)
-
 logger.debug(f"Changed working directory to {relative_path}")
 
 settings = settings.Settings()
-settings.logger = logger
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
