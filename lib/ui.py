@@ -3,18 +3,24 @@ from tkinter.filedialog import askdirectory, askopenfilename
 
 
 def select_folder():
-    Tk().withdraw()
-    foldername = askdirectory()
-    return foldername
+    root = Tk()
+    root.withdraw()
+    folder = askdirectory()
+    root.destroy()
+    return folder
 
 
 def select_file():
-    Tk().withdraw()
-    filename = askopenfilename()
-    return filename
+    root = Tk()
+    root.withdraw()
+    file = askopenfilename()
+    root.destroy()
+    return file
 
 
 def select_archive_file():
-    Tk().withdraw()
+    root = Tk()
+    root.withdraw()
     filename = askopenfilename(filetypes=[("Text files", "*.txt")])
+    root.destroy()
     return filename
