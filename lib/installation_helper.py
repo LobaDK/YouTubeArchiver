@@ -9,7 +9,7 @@ import shutil
 import logging
 from pathlib import Path
 
-from lib.misc import ffmpeg_is_installed
+from lib.utility import ffmpeg_is_installed
 
 
 class InstallationHelper:

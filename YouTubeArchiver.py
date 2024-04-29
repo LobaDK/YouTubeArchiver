@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import time
-from lib import logging_helper, misc, installation_helper, settings, menu
+from lib import logging_helper, installation_helper, settings, menu, utility
 
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
@@ -93,10 +93,10 @@ options = {
 
 # Main menu for the user
 while True:
-    misc.clear()
+    utility.clear()
     print(main_menu_text)
     option = input("Enter your choice: ").upper()
     if option in options:
         options[option]()
     else:
-        misc.not_valid_input(option)
+        utility.not_valid_input(option)

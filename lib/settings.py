@@ -1,11 +1,11 @@
-from lib import misc, menu  # noqa
+from lib import menu, utility  # noqa
 import logging  # noqa
 
 
 class Settings:
     def __init__(self):
         try:
-            self.ffmpeg_is_installed = misc.ffmpeg_is_installed()
+            self.ffmpeg_is_installed = utility.ffmpeg_is_installed()
         except Exception:
             self.ffmpeg_is_installed = False
         self.logger = None  # type: logging.Logger
