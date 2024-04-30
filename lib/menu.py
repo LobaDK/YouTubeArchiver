@@ -1,8 +1,10 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
+from InquirerPy import prompt
 
 from lib import settings, ui, utility, menu_components
 from lib.utility import logger, Choice
+from lib.ui import InquirerMenu
 
 
 class DownloadType(Enum):
@@ -41,16 +43,13 @@ def menu(menu_param: MenuParam):
 
     # Loop to get the URL of the video or playlist to download
     while True:
-        url = utility.get_user_input(
-            "Enter the URL of the video or playlist you want to download. Write 'back' to return to the main menu: ",
-            default="",
-            lower=False,
-        )
-        if url.lower() == "back":
-            logger.debug("User chose to return to the main menu.")
-            return  # Return to the main menu
+        url = prompt(InquirerMenu.youtube_url_input)["url"]
         if not menu_components.url_is_valid(url):
-            continue  # Ask for the URL again
+            answer = prompt(InquirerMenu.youtube_url_select)["url_select"]
+            if answer == Choice.SELECT.value:
+                continue  # Ask for the URL again
+            elif answer == Choice.MENU.value:
+                return  # Return to the main menu
 
         print(
             f"\nPlease select the folder where you want to {download_type} the videos: "
@@ -59,46 +58,41 @@ def menu(menu_param: MenuParam):
         while True:
             folder = ui.select_folder()
             if not folder:
-                logger.info("No folder selected.")
-                option = utility.get_user_input(
-                    "Do you want to select a folder again? (Y/n): "
-                )
-                if option == Choice.NO.value:
-                    logger.debug("User chose not to select a folder.")
+                logger.debug("No folder selected.")
+                answer = prompt(InquirerMenu.download_folder_select)["download_folder"]
+                if answer == Choice.SELECT.value:
+                    logger.debug("User chose to select a folder.")
+                    continue  # Ask for the folder again
+                elif answer == Choice.BACK.value:
+                    logger.debug("User chose to go back.")
+                    break  # Go back to the URL input
+                elif answer == Choice.MENU.value:
+                    logger.debug("User chose to return to the main menu.")
                     return
-                elif option == Choice.YES.value:
-                    logger.debug("User chose to select a folder again.")
-                    continue
-            logger.debug(f"User selected folder: {folder}")
-            break
 
-        print(
-            "\nyt-dlp supports using an archive file to keep track of downloaded videos. It defaults to 'archive.txt'."
-        )
-        while True:
-            option = utility.get_user_input(
-                "Would you like to use an archive file? (Y/n): "
+            # Loop to get the desired archive file location
+            print(
+                "\nyt-dlp supports using an archive file to keep track of downloaded videos. It defaults to 'archive.txt'."
             )
-            if option == Choice.YES.value:
-                logger.debug("User chose to use an archive file.")
-                archive_file = ui.select_archive_file()
-                if not archive_file:
-                    logger.info("No archive file selected.")
-                    option = utility.get_user_input(
-                        "Do you want to select an archive file again? (Y/n): "
-                    )
-                    if option == Choice.NO.value:
-                        logger.debug("User chose not to select an archive file.")
-                        return
-                    elif option == Choice.YES.value:
-                        logger.debug("User chose to select an archive file again.")
-                        continue
-                logger.debug(f"User selected archive file: {archive_file}")
-                break
-            elif option == Choice.NO.value:
-                logger.debug("User chose not to use an archive file.")
-                archive_file = None
-                break
-            else:
-                utility.not_valid_input(option)
-                continue
+            while True:
+                answer = prompt(InquirerMenu.use_archive_file_question)[
+                    "use_archive_file"
+                ]
+                if answer is True:
+                    logger.debug("User chose to use an archive file.")
+                    print("\nPlease select the archive file: ")
+                    archive_file = ui.select_file(filetypes=[("Text files", "*.txt")])
+                    if not archive_file:
+                        logger.debug("No archive file selected.")
+                        answer = prompt(InquirerMenu.archive_file_select)[
+                            "archive_file"
+                        ]
+                        if answer == Choice.SELECT.value:
+                            logger.debug("User chose to select an archive file.")
+                            continue  # Ask for the archive file again
+                        elif answer == Choice.BACK.value:
+                            logger.debug("User chose to go back.")
+                            break  # Go back to the folder selection
+                        elif answer == Choice.MENU.value:
+                            logger.debug("User chose to return to the main menu.")
+                            return

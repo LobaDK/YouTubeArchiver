@@ -7,9 +7,17 @@ import zipfile
 import requests
 import subprocess
 import tqdm
+import certifi
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from enum import Enum
+import pkg_resources
+from yolk.pypi import CheeseShop
+
+
+# Fixes "SSL: CERTIFICATE_VERIFY_FAILED" error on Windows from CheeseShop.
+# TODO: Further test this. Only Windows? Only on certain networks/systems?
+os.environ["SSL_CERT_FILE"] = certifi.where()
 
 
 class Choice(Enum):
@@ -23,6 +31,9 @@ class Choice(Enum):
 
     YES = "y"
     NO = "n"
+    SELECT = "s"
+    BACK = "b"
+    MENU = "m"
 
 
 LOGGER_NAME = "YouTubeArchiver"
@@ -136,6 +147,38 @@ class InstallationHelper:
     def __init__(self) -> None:
         self.logger = logger
 
+    def get_installed_version(self, package_name: str) -> str | None:
+        """
+        Get the installed version of a package.
+
+        Args:
+            package_name (str): The name of the package.
+
+        Returns:
+            str | None: The installed version of the package, or None if the package is not installed.
+        """
+        try:
+            return pkg_resources.get_distribution(package_name).version
+        except pkg_resources.DistributionNotFound:
+            return None
+
+    def get_latest_version(self, package_name: str) -> str | None:
+        """
+        Get the latest version of a package from PyPI.
+
+        Args:
+            package_name (str): The name of the package.
+
+        Returns:
+            str | None: The latest version of the package, or None if the package is not found on PyPI.
+        """
+        # TODO: Properly test this function. Dumb corporate proxy is messing with the SSL certificate.
+        pypi = CheeseShop()
+        versions = pypi.query_versions_pypi(package_name)
+        if not versions:
+            return None
+        return versions[1][0]
+
     def extract_file(self, from_file: str, to_dir: str):
         """
         Extracts the contents of a compressed file to a directory.
@@ -233,9 +276,52 @@ class InstallationHelper:
         Example usage:
         update_ytdl()
         """
+        installed_version = self.get_installed_version("yt-dlp")
+        latest_version = self.get_latest_version("yt-dlp")
+        if not latest_version:
+            self.logger.error(
+                "Failed to get the latest version of yt-dlp. Please check your internet connection and try again."
+            )
+            time.sleep(3)
+            return
+        if installed_version == latest_version:
+            self.logger.info("yt-dlp is already up to date.")
+            time.sleep(2)
+            return
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "yt-dlp"])
         self.logger.info(
             "yt-dlp has been updated to the latest version. The script will now exit to apply the changes."
+        )
+        time.sleep(2)
+        sys.exit(0)
+
+    def update_youtube_archiver(self):
+        """
+        Update YouTubeArchiver to the latest version.
+
+        This function updates YouTubeArchiver to the latest version by running the command `git pull`.
+
+        Note: This function relies on the `subprocess` and `time` modules.
+
+        Example usage:
+        update_youtube_archiver()
+        """
+        std_out, std_err = subprocess.Popen(
+            ["git", "pull"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        ).communicate()
+        if std_err:
+            self.logger.error(
+                "An error occurred while updating YouTubeArchiver. Please refer to the logs for more information.",
+                exc_info=True,
+            )
+            time.sleep(3)
+            sys.exit(1)
+        if (b"Already up to date" or b"Already up-to-date") in std_out:
+            self.logger.info("YouTubeArchiver is already up to date.")
+            time.sleep(2)
+            return
+        self.logger.info(
+            "YouTubeArchiver has been updated to the latest version. The script will now exit to apply the changes."
         )
         time.sleep(2)
         sys.exit(0)

@@ -3,6 +3,7 @@ import sys
 import time
 from lib import settings, menu, utility
 from lib.utility import logger, installation_helper
+from InquirerPy import prompt
 
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,25 +53,31 @@ else:
     logger.debug("ffmpeg is installed and detected.")
 
 
-main_menu_text = f"""
-Welcome to YouTube Archiver!
-FFmpeg detected: {settings.ffmpeg_is_installed}
-\nPlease select an option
-\n[D]ownload
-\n[A]rchive
-\n[U]pdate
-\n[E]xit
-"""
+main_menu_options = [
+    {
+        "type": "list",
+        "name": "main_menu",
+        "message": "Please select an option:",
+        "choices": [
+            {"name": "Download", "value": "D"},
+            {"name": "Archive", "value": "A"},
+            {"name": "Update yt-dlp", "value": "UD"},
+            {"name": "Update YouTube Archiver", "value": "UA"},
+            {"name": "Exit", "value": "E"},
+        ],
+    }
+]
 
-# Options for the main menu.
-options = {
+# Functions for the main menu options
+functions = {
     "D": lambda: menu.menu(
-        menu.MenuParam(settings=settings, download_type=menu.DownloadType.DOWNLOAD)
+        menu.MenuParam(Settings=settings, download_type=menu.DownloadType.DOWNLOAD)
     ),
     "A": lambda: menu.menu(
-        menu.MenuParam(settings=settings, download_type=menu.DownloadType.ARCHIVE)
+        menu.MenuParam(Settings=settings, download_type=menu.DownloadType.ARCHIVE)
     ),
-    "U": installation_helper.update_ytdlp,
+    "UD": installation_helper.update_ytdlp,
+    "UA": installation_helper.update_youtube_archiver,
     "E": sys.exit,
 }
 
@@ -78,9 +85,5 @@ options = {
 # Main menu for the user
 while True:
     utility.clear()
-    print(main_menu_text)
-    option = input("Enter your choice: ").upper()
-    if option in options:
-        options[option]()
-    else:
-        utility.not_valid_input(option)
+    main_menu_answer = prompt(main_menu_options)
+    functions[main_menu_answer["main_menu"]]()
