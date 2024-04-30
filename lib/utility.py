@@ -3,27 +3,30 @@ import os
 import time
 import shutil
 import logging
+import zipfile
+import requests
+import subprocess
+import tqdm
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
+from enum import Enum
 
-from lib.menu import Choice
-from lib import logging_helper, installation_helper
+
+class Choice(Enum):
+    """
+    Enum representing the choice of the user.
+
+    Attributes:
+        YES (str): Represents the choice of yes.
+        NO (str): Represents the choice of no.
+    """
+
+    YES = "y"
+    NO = "n"
+
 
 LOGGER_NAME = "YouTubeArchiver"
 LOG_FILE = "log.log"
-
-# Create a logger in the utility module so we can import and use it in other modules.
-log_helper = logging_helper.LoggingHelper(
-    logger_name=LOGGER_NAME,
-    log_file=LOG_FILE,
-    file_log_level=logging.DEBUG,
-    stream_log_level=logging.INFO,
-    include_timestamp=False,
-)
-
-logger = log_helper.create_logger()
-
-# Create an installation helper object in the utility module so we can import and use it in other modules.
-installation_helper = installation_helper.InstallationHelper(logger)
 
 
 def create_folder(folder: Path):
@@ -114,3 +117,301 @@ def ffmpeg_is_installed():
             os.path.isfile("bin/ffmpeg.exe"),
         ]
     )
+
+
+class InstallationHelper:
+    """
+    Helper class for installation-related tasks.
+
+    This class provides methods for extracting compressed files, downloading ffmpeg,
+    and updating yt-dlp to the latest version.
+
+    Example usage:\n
+    helper = InstallationHelper()\n
+    helper.extract_file("ffmpeg.zip", "bin")\n
+    helper.download_ffmpeg()\n
+    helper.update_ytdlp()
+    """
+
+    def __init__(self) -> None:
+        self.logger = logger
+
+    def extract_file(self, from_file: str, to_dir: str):
+        """
+        Extracts the contents of a compressed file to a directory.
+
+        This function extracts the contents of a compressed file to a directory.
+        It supports zip files, and if the extracted file already exists, it will be overwritten.
+
+        Args:
+            from_file (str): The path to the compressed file.
+            to_dir (str): The path to the directory where the contents will be extracted.
+
+        Note: This function relies on the `zipfile` module.
+
+        Example usage:
+        extract_file("ffmpeg.zip", "bin")
+        """
+        # Extract the zip file to the specified directory and show progress using tqdm
+        with zipfile.ZipFile(from_file, "r") as archive:
+            for file in tqdm.tqdm(archive.namelist(), desc="Extracting", unit="files"):
+                if "/bin/ffmpeg" in file:
+                    with archive.open(file) as source, open(
+                        os.path.join(to_dir, Path(file).name), "wb"
+                    ) as target:
+                        shutil.copyfileobj(source, target)
+                    break
+        os.unlink(from_file)
+
+    def download_ffmpeg(self):
+        from lib.utility import ffmpeg_is_installed
+
+        """
+        Download the ffmpeg executable for the current platform.
+
+        This function downloads the ffmpeg executable for the current platform
+        (Windows, or macOS) and saves it to the `bin` directory.
+
+        Note: This function relies on the `os`, `requests`, `sys`, and `tqdm` modules.
+
+        Example usage:
+        download_ffmpeg()
+        """
+
+        # Define the download URLs for ffmpeg binaries
+        ffmpeg_urls = {
+            "Windows": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+            "macOS": "https://evermeet.cx/ffmpeg/get/zip",
+            "Linux": None,  # Use the system package manager to install ffmpeg on Linux
+        }
+
+        if sys.platform == "win32":
+            self.logger.debug("Detected Windows platform")
+            download_url = ffmpeg_urls["Windows"]
+            download_file = "bin/ffmpeg.zip"
+        elif sys.platform == "darwin":
+            self.logger.debug("Detected macOS platform")
+            download_url = ffmpeg_urls["macOS"]
+            download_file = "bin/ffmpeg.zip"
+
+        # Create the `bin` directory if it does not exist
+        os.makedirs("bin", exist_ok=True)
+
+        response = requests.get(download_url, stream=True)
+        total_size = int(response.headers.get("content-length", 0))
+
+        self.logger.info(f"Downloading ffmpeg from: {download_url}")
+        # Download the compressed ffmpeg binary and show progress using tqdm
+        with tqdm.tqdm.wrapattr(
+            response.raw, "read", total=total_size, desc="Downloading"
+        ) as r:
+            with open(download_file, "wb") as f:
+                shutil.copyfileobj(r, f)
+
+        # Extract the downloaded ffmpeg binary
+        self.extract_file(f"{download_file}", "bin")
+
+        if ffmpeg_is_installed():
+            self.logger.info(
+                "Download and extraction of ffmpeg completed successfully. ffmpeg is now available in the `bin` directory."
+            )
+        else:
+            self.logger.error(
+                "An error occurred while downloading and extracting ffmpeg. Please install ffmpeg manually."
+            )
+            time.sleep(3)
+            exit(1)
+
+    def update_ytdlp(self):
+        """
+        Update yt-dlp to the latest version.
+
+        This function updates yt-dlp to the latest version by running the command `pip install -U yt-dlp`.
+
+        Note: This function relies on the `os` and `time` modules.
+
+        Example usage:
+        update_ytdl()
+        """
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "yt-dlp"])
+        self.logger.info(
+            "yt-dlp has been updated to the latest version. The script will now exit to apply the changes."
+        )
+        time.sleep(2)
+        sys.exit(0)
+
+
+class LoggingHelper:
+    """
+    A helper class for creating and configuring loggers.
+
+    This class provides methods to create and configure loggers with file and stream handlers.
+    It also supports creating log directories and checking if a logger with a specified name exists.
+    """
+
+    def __init__(
+        self,
+        logger_name: str,
+        log_file: str,
+        include_timestamp: bool = True,
+        log_level_left_padding: int = 0,
+        file_log_level: int = logging.INFO,
+        stream_log_level: int = logging.ERROR,
+        interval: str = "midnight",
+        backup_count: int = 7,
+    ):
+        self.logger_name = logger_name
+        self.log_file = log_file
+        self.include_timestamp = include_timestamp
+        self.log_level_left_padding = log_level_left_padding
+        self.file_log_level = file_log_level
+        self.stream_log_level = stream_log_level
+        self.interval = interval
+        self.backup_count = backup_count
+
+    def logger_exists(self) -> bool:
+        """
+        Check if the logger with the specified name exists.
+
+        Returns:
+            bool: True if the logger exists, False otherwise.
+        """
+        return self.logger_name in logging.Logger.manager.loggerDict
+
+    def create_logger(self) -> logging.Logger:
+        """
+        Creates a logger with the given name and log file.
+
+        Helper function to create, configure, and return a logger with the given name and log file.
+        The logger will have a file handler and a stream handler attached to it.
+        If the logger already exists, it will be returned without any changes.
+        if the interval is specified, a TimedRotatingFileHandler will be created instead of a FileHandler.
+
+        Returns:
+            logging.Logger: The created logger.
+        """
+        if not Path(self.log_file).parent.exists():
+            self.create_log_dir(str(Path(self.log_file).parent))
+
+        if self.logger_exists():
+            return logging.getLogger(self.logger_name)
+
+        logger = logging.getLogger(self.logger_name)
+        logger.setLevel(logging.DEBUG)
+
+        stream_handler = self._create_stream_handler()
+        logger.addHandler(stream_handler)
+
+        if self.interval:
+            file_handler = self._create_timed_rotating_file_handler()
+        else:
+            file_handler = self._create_file_handler()
+        logger.addHandler(file_handler)
+
+        return logger
+
+    def _create_file_handler(self) -> logging.FileHandler:
+        """
+        Creates a logging FileHandler with the specified log file and level.
+
+        Returns:
+            logging.FileHandler: The file handler object.
+
+        """
+        handler = logging.FileHandler(
+            filename=self.log_file,
+            encoding="utf-8",
+            mode="a",
+        )
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            self._format_builder(),
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.file_log_level)
+        return handler
+
+    def _create_stream_handler(self) -> logging.StreamHandler:
+        """
+        Creates a logging StreamHandler with the specified log level.
+
+        Returns:
+            logging.StreamHandler: The created StreamHandler object.
+
+        """
+        handler = logging.StreamHandler()
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            self._format_builder(),
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.stream_log_level)
+        return handler
+
+    def _create_timed_rotating_file_handler(self) -> TimedRotatingFileHandler:
+        """
+        Creates a logging TimedRotatingFileHandler with the specified log file, level, interval, and backup count.
+
+        Returns:
+            logging.handlers.TimedRotatingFileHandler: The created TimedRotatingFileHandler object.
+        """
+        handler = TimedRotatingFileHandler(
+            filename=self.log_file,
+            when=self.interval,
+            backupCount=self.backup_count,
+            encoding="utf-8",
+        )
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(
+            "[{asctime}] [{levelname:<8}] {name}: {message}",
+            datefmt=date_format,
+            style="{",
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(self.file_log_level)
+        return handler
+
+    def _format_builder(self) -> str:
+        """
+        Builds the format string for the logger.
+
+        Returns:
+            str: The format string for the logger.
+        """
+        format_string = ""
+        if self.include_timestamp:
+            format_string += "[{asctime}] "
+        format_string += (
+            "[{levelname:<" + str(self.log_level_left_padding) + "}] {name}: {message}"
+        )
+        return format_string
+
+    def create_log_dir(self):
+        """
+        Creates a log directory if it does not exist.
+
+        Args:
+            log_dir (str): The path to the log directory.
+
+        """
+        os.makedirs(str(Path(self.log_file).parent), exist_ok=True)
+
+
+# Create a logger in the utility module so we can import and use it in other modules.
+log_helper = LoggingHelper(
+    logger_name=LOGGER_NAME,
+    log_file=LOG_FILE,
+    file_log_level=logging.DEBUG,
+    stream_log_level=logging.INFO,
+    include_timestamp=False,
+)
+
+logger = log_helper.create_logger()
+
+
+# Create an installation helper object in the utility module so we can import and use it in other modules.
+installation_helper = InstallationHelper()

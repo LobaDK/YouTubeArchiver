@@ -1,22 +1,8 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
-import yt_dlp
 
 from lib import settings, ui, utility, menu_components
-from lib.utility import logger
-
-
-class Choice(Enum):
-    """
-    Enum representing the choice of the user.
-
-    Attributes:
-        YES (str): Represents the choice of yes.
-        NO (str): Represents the choice of no.
-    """
-
-    YES = "y"
-    NO = "n"
+from lib.utility import logger, Choice
 
 
 class DownloadType(Enum):
@@ -33,7 +19,7 @@ class DownloadType(Enum):
 
 
 class MenuParam(BaseModel):
-    settings: settings.Settings
+    Settings: settings.Settings
     download_type: DownloadType
 
     class Config(ConfigDict):
@@ -50,7 +36,7 @@ def menu(menu_param: MenuParam):
     download_type = (
         "download" if menu_param.download_type == DownloadType.DOWNLOAD else "archive"
     )
-    settings = menu_param.settings  # noqa TODO: Remove noqa when used
+    settings = menu_param.Settings  # noqa TODO: Remove noqa when used
     utility.clear()
 
     # Loop to get the URL of the video or playlist to download
@@ -62,9 +48,9 @@ def menu(menu_param: MenuParam):
         )
         if url.lower() == "back":
             logger.debug("User chose to return to the main menu.")
-            return
+            return  # Return to the main menu
         if not menu_components.url_is_valid(url):
-            continue
+            continue  # Ask for the URL again
 
         print(
             f"\nPlease select the folder where you want to {download_type} the videos: "
@@ -74,7 +60,9 @@ def menu(menu_param: MenuParam):
             folder = ui.select_folder()
             if not folder:
                 logger.info("No folder selected.")
-                option = utility.get_user_input("Do you want to select a folder again? (Y/n): ")
+                option = utility.get_user_input(
+                    "Do you want to select a folder again? (Y/n): "
+                )
                 if option == Choice.NO.value:
                     logger.debug("User chose not to select a folder.")
                     return
