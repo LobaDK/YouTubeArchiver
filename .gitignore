@@ -9,6 +9,7 @@ ffmpeg*
 *.7z
 *.pyproj
 .venv
+*.log*
 
 # User-specific files
 *.rsuser
