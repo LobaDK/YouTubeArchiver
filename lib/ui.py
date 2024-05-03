@@ -1,63 +1,142 @@
 from tkinter import Tk
 from tkinter.filedialog import askdirectory, askopenfilename
-from lib.utility import Choice
+from lib.utility import ChoiceEnum
+from InquirerPy import inquirer
+from InquirerPy.base.control import Choice
+import re
 
 
 class InquirerMenu:
-    youtube_url_input = [
-        {
-            "type": "input",
-            "name": "url",
-            "message": "Enter the URL of the video or playlist:",
-        }
-    ]
+    def validate_youtube_url(url: str) -> bool:
+        pattern = r"^https://(www\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/playlist\?list=.+(&.+)?|youtu\.be/.+(&.+)?|music\.youtube\.com/watch\?v=.{11}(&.+)?|m\.youtube\.com/watch\?v=.{11}(&.+)?)$"
+        return bool(re.match(pattern, url))
 
-    youtube_url_select = [
-        {
-            "type": "list",
-            "name": "url_select",
-            "message": "The URL is invalid. Please select an option:",
-            "choices": [
-                {"name": "Select a URL", "value": Choice.SELECT.value},
-                {"name": "Menu", "value": Choice.MENU.value},
-            ],
-        }
-    ]
+    def validate_date(date: str) -> bool:
+        pattern = r"^\d{4}-\d{2}-\d{2}"
+        if bool(re.match(pattern, date)):
+            date.strip("-")
+            return True
+        return False
 
-    download_folder_select = [
-        {
-            "type": "list",
-            "name": "download_folder",
-            "message": "Please select an option:",
-            "choices": [
-                {"name": "Select a folder", "value": Choice.SELECT.value},
-                {"name": "Back", "value": Choice.BACK.value},
-                {"name": "Menu", "value": Choice.MENU.value},
-            ],
-        }
-    ]
+    main_menu_options = inquirer.select(
+        message="Select an option",
+        choices=[
+            Choice(value="D", name="Download videos"),
+            Choice(value="A", name="Archive videos"),
+            Choice(value="UD", name="Update yt-dlp"),
+            Choice(value="UA", name="Update YouTube Archiver"),
+            Choice(value="E", name="Exit"),
+        ],
+        default="D",
+        instruction="Use the arrow keys to navigate, press Enter to select",
+    )
 
-    use_archive_file_question = [
-        {
-            "type": "confirm",
-            "name": "use_archive_file",
-            "message": "Do you want to use an archive file?",
-            "default": True,
-        }
-    ]
+    ffmpeg_download_question = inquirer.confirm(
+        message="Do you want to download ffmpeg now?",
+        default=True,
+        instruction="It is not required, but it is highly recommended to have it installed. ",
+    )
 
-    archive_file_select = [
-        {
-            "type": "list",
-            "name": "archive_file",
-            "message": "Please select an option:",
-            "choices": [
-                {"name": "Select an archive file", "value": Choice.SELECT.value},
-                {"name": "Back", "value": Choice.BACK.value},
-                {"name": "Menu", "value": Choice.MENU.value},
-            ],
-        }
-    ]
+    continue_without_ffmpeg_question = inquirer.confirm(
+        message="Do you want to continue without ffmpeg?",
+        default=False,
+    )
+
+    youtube_url_input = inquirer.text(
+        message="Enter the URL of the video or playlist to download/archive:",
+        validate=validate_youtube_url,
+    )
+
+    youtube_url_select = inquirer.select(
+        message="Please select an option:",
+        choices=[
+            Choice(value=ChoiceEnum.SELECT.value, name="Select a URL"),
+            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+        ],
+    )
+
+    download_folder_select = inquirer.select(
+        message="Please select an option:",
+        choices=[
+            Choice(value=ChoiceEnum.SELECT.value, name="Select a folder"),
+            Choice(value=ChoiceEnum.BACK.value, name="Back"),
+            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+        ],
+    )
+
+    use_archive_file_question = inquirer.confirm(
+        message="Do you want to use an archive file?",
+        default=True,
+    )
+
+    archive_file_select = inquirer.select(
+        message="Please select an option:",
+        choices=[
+            Choice(value=ChoiceEnum.SELECT.value, name="Select an archive file"),
+            Choice(value=ChoiceEnum.BACK.value, name="Back"),
+            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+        ],
+    )
+
+    url_is_playlist_select = inquirer.select(
+        message="The URL is a playlist. Please select which you'd like to download:",
+        Choices=[
+            Choice(value="all", name="Download all videos in the playlist"),
+            Choice(value="index", name="Download a specific index in the playlist"),
+            Choice(
+                value="date", name="Download videos uploaded on a specific date range"
+            ),
+            Choice(value=ChoiceEnum.BACK.value, name="Back"),
+            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+        ],
+    )
+
+    url_is_video_in_playlist_select = inquirer.select(
+        message="The URL is a playlist. Please select which you'd like to download:",
+        Choices=[
+            Choice(value="all", name="Download all videos in the playlist"),
+            Choice(value="index", name="Download a specific index in the playlist"),
+            Choice(
+                value="date", name="Download videos uploaded on a specific date range"
+            ),
+            Choice(value="video", name="Download the single video"),
+            Choice(value=ChoiceEnum.BACK.value, name="Back"),
+            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+        ],
+    )
+
+    get_playlist_start_index = inquirer.text(
+        message="Enter the start index of the playlist:",
+        validate=lambda x: x.isdigit(),
+    )
+
+    get_playlist_end_index = inquirer.text(
+        message="Enter the end index of the playlist:",
+        validate=lambda x: x.isdigit(),
+    )
+
+    get_after_date = inquirer.text(
+        message="Enter the start date (YYYY-MM-DD):",
+        validate=validate_date,
+    )
+
+    get_before_date = inquirer.text(
+        message="Enter the end date (YYYY-MM-DD):",
+        validate=validate_date,
+    )
+
+    reverse_order_question = inquirer.confirm(
+        message="Do you want to download the videos in reverse order?",
+        default=False,
+    )
+
+    media_download_checkbox = inquirer.checkbox(
+        message="Select the media types you want to download:",
+        choices=[
+            Choice(value="audio", name="Audio"),
+            Choice(value="video", name="Video"),
+        ],
+    )
 
 
 def select_folder():

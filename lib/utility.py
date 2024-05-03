@@ -20,7 +20,7 @@ from yolk.pypi import CheeseShop
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
 
-class Choice(Enum):
+class ChoiceEnum(Enum):
     """
     Enum representing the choice of the user.
 
@@ -38,6 +38,32 @@ class Choice(Enum):
 
 LOGGER_NAME = "YouTubeArchiver"
 LOG_FILE = "log.log"
+
+
+def url_is_only_playlist(url: str) -> bool:
+    """
+    Check if the URL is a playlist URL.
+
+    Args:
+        url (str): The URL to check.
+
+    Returns:
+        bool: True if the URL is a playlist URL, False otherwise.
+    """
+    return "playlist?list=" in url
+
+
+def url_is_video_in_playlist(url: str) -> bool:
+    """
+    Check if the URL is a video in a playlist URL.
+
+    Args:
+        url (str): The URL to check.
+
+    Returns:
+        bool: True if the URL is a video in a playlist URL, False otherwise.
+    """
+    return all(x in url for x in ["watch?v=", "&list="])
 
 
 def create_folder(folder: Path):
@@ -63,7 +89,9 @@ def create_folder(folder: Path):
         return False
 
 
-def get_user_input(prompt: str, default: str = Choice.YES.value, lower: bool = True):
+def get_user_input(
+    prompt: str, default: str = ChoiceEnum.YES.value, lower: bool = True
+):
     """
     Prompts the user for input with the given prompt and returns the user's input.
     If the user enters an empty string, the default value is returned instead.
@@ -114,20 +142,30 @@ def not_valid_input(option: str):
     time.sleep(3)
 
 
-def ffmpeg_is_installed():
+def ffmpeg_is_installed() -> tuple[bool, str | None]:
     """
     Check if ffmpeg is installed on the system.
 
+    This function checks if ffmpeg is installed on the system by searching for the executable in the predefined locations.
+
     Returns:
-        bool: True if ffmpeg is installed, False otherwise.
+        tuple[bool, str | None]: A tuple containing a boolean value indicating if ffmpeg is installed and the location of the executable.
     """
-    return any(
-        [
-            shutil.which("ffmpeg") is not None,
-            os.path.isfile("bin/ffmpeg"),
-            os.path.isfile("bin/ffmpeg.exe"),
-        ]
-    )
+    locations = [
+        "ffmpeg",
+        "ffmpeg.exe",
+        "bin/ffmpeg",
+        "bin/ffmpeg.exe",
+    ]
+    for location in locations:
+        if shutil.which(location):
+            return True, location
+    return False, None
+
+
+def _ffmpeg_is_installed() -> bool:
+    result, _ = ffmpeg_is_installed()
+    return result
 
 
 class InstallationHelper:
@@ -207,8 +245,6 @@ class InstallationHelper:
         os.unlink(from_file)
 
     def download_ffmpeg(self):
-        from lib.utility import ffmpeg_is_installed
-
         """
         Download the ffmpeg executable for the current platform.
 
@@ -254,7 +290,7 @@ class InstallationHelper:
         # Extract the downloaded ffmpeg binary
         self.extract_file(f"{download_file}", "bin")
 
-        if ffmpeg_is_installed():
+        if _ffmpeg_is_installed():
             self.logger.info(
                 "Download and extraction of ffmpeg completed successfully. ffmpeg is now available in the `bin` directory."
             )

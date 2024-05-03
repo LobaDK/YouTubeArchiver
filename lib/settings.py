@@ -4,7 +4,7 @@ class Settings:
         import logging  # noqa
 
         try:
-            self.ffmpeg_is_installed = utility.ffmpeg_is_installed()
+            self.ffmpeg_is_installed, self.ffmpeg_location = utility.ffmpeg_is_installed()
         except Exception:
             self.ffmpeg_is_installed = False
         self.logger = None  # type: logging.Logger

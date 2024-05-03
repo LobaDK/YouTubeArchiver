@@ -3,7 +3,7 @@ import sys
 import time
 from lib import settings, menu, utility
 from lib.utility import logger, installation_helper
-from InquirerPy import prompt
+from lib.ui import InquirerMenu
 
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
@@ -23,11 +23,9 @@ except ImportError:
     sys.exit(1)
 
 if settings.ffmpeg_is_installed is False:
-    logger.warning(
-        "ffmpeg is not installed. It is not required, but it is highly recommended to have it installed."
-    )
-    option = input("Do you want to download ffmpeg now? (Y/n): ").lower() or "y"
-    if option == "y":
+    logger.warning("ffmpeg is not installed.")
+    option = InquirerMenu.ffmpeg_download_question.execute()
+    if option is True:
         logger.debug("User chose to download ffmpeg.")
         if not sys.platform == "linux":
             try:
@@ -37,11 +35,8 @@ if settings.ffmpeg_is_installed is False:
                 logger.error(
                     "An error occurred while downloading ffmpeg.", exc_info=True
                 )
-                option = (
-                    input("Do you want to continue without ffmpeg? (Y/n): ").lower()
-                    or "n"
-                )
-                if option == "n":
+                option = InquirerMenu.continue_without_ffmpeg_question.execute()
+                if option is False:
                     sys.exit(1)
         else:
             logger.warning(
@@ -52,21 +47,6 @@ if settings.ffmpeg_is_installed is False:
 else:
     logger.debug("ffmpeg is installed and detected.")
 
-
-main_menu_options = [
-    {
-        "type": "list",
-        "name": "main_menu",
-        "message": "Please select an option:",
-        "choices": [
-            {"name": "Download", "value": "D"},
-            {"name": "Archive", "value": "A"},
-            {"name": "Update yt-dlp", "value": "UD"},
-            {"name": "Update YouTube Archiver", "value": "UA"},
-            {"name": "Exit", "value": "E"},
-        ],
-    }
-]
 
 # Functions for the main menu options
 functions = {
@@ -85,5 +65,5 @@ functions = {
 # Main menu for the user
 while True:
     utility.clear()
-    main_menu_answer = prompt(main_menu_options)
-    functions[main_menu_answer["main_menu"]]()
+    main_menu_answer = InquirerMenu.main_menu_options.execute()
+    functions[main_menu_answer]()
