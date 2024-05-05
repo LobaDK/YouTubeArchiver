@@ -8,16 +8,13 @@ import requests
 import subprocess
 import tqdm
 import certifi
+import pkg_resources
+
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from enum import Enum
-import pkg_resources
 from yolk.pypi import CheeseShop
-
-
-# Fixes "SSL: CERTIFICATE_VERIFY_FAILED" error on Windows from CheeseShop.
-# TODO: Further test this. Only Windows? Only on certain networks/systems?
-os.environ["SSL_CERT_FILE"] = certifi.where()
+from ssl import SSLCertVerificationError
 
 
 class ChoiceEnum(Enum):
@@ -210,8 +207,16 @@ class InstallationHelper:
         Returns:
             str | None: The latest version of the package, or None if the package is not found on PyPI.
         """
-        # TODO: Properly test this function. Dumb corporate proxy is messing with the SSL certificate.
-        pypi = CheeseShop()
+        try:
+            pypi = CheeseShop()
+        except (
+            SSLCertVerificationError
+        ):  # Some systems can fail with SSL: CERTIFICATE_VERIFY_FAILED
+            os.environ["SSL_CERT_FILE"] = certifi.where()
+            self.logger.info(
+                "SSL certificate verification failed. Trying again after setting the SSL_CERT_FILE."
+            )
+            pypi = CheeseShop()
         versions = pypi.query_versions_pypi(package_name)
         if not versions:
             return None
