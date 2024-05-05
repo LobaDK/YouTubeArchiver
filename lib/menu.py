@@ -151,6 +151,7 @@ def menu(menu_param: MenuParam):
                         elif answer == "date":
                             while True:
                                 after_date: str = InquirerMenu.get_after_date.execute()
+                                after_date = after_date.lower()
                                 if after_date == "":
                                     after_date = ui.select_date()
                                 elif after_date in ["today", "yesterday"]:
@@ -162,6 +163,7 @@ def menu(menu_param: MenuParam):
                                 before_date: str = (
                                     InquirerMenu.get_before_date.execute()
                                 )
+                                before_date = before_date.lower()
                                 if before_date == "":
                                     before_date = ui.select_date()
                                 elif before_date in ["today", "yesterday"]:
