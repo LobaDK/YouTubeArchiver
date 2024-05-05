@@ -1,4 +1,4 @@
-import yt_dlp
+from yt_dlp import YoutubeDL, DownloadError
 from lib.utility import logger
 
 
@@ -6,10 +6,11 @@ def url_is_valid(url: str):
     logger.debug(f"User entered URL: {url}")
     print("\nTesting URL. Press Ctrl+C to skip.")
     try:
-        with yt_dlp.YoutubeDL(
+        with YoutubeDL(
             {
-                "playlistitems": "1",
-                "lazyplaylist": True,
+                "logger": logger,
+                "playlist_items": "1",
+                "lazy_playlist": True,
                 "noplaylist": True,
             }
         ) as ytdlp:
@@ -19,6 +20,6 @@ def url_is_valid(url: str):
     except KeyboardInterrupt:
         logger.debug("User skipped URL testing.")
         return True
-    except yt_dlp.utils.DownloadError as e:
+    except DownloadError as e:
         logger.info(e)
         return False
