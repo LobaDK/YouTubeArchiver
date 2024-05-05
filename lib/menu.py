@@ -4,6 +4,7 @@ from textwrap import dedent
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DateRange
 from datetime import datetime, timedelta
+from InquirerPy import inquirer
 
 from lib import settings, ui, utility, menu_components
 from lib.utility import logger, ChoiceEnum
@@ -69,6 +70,16 @@ def menu(menu_param: MenuParam):
                 return  # Return to the main menu
 
         settings.url = url
+
+        # TODO: Move this to a more appropriate location. Also add a validate that requires the user to select at least one stream.
+        info = menu_components.get_video_info(url)
+        streams = menu_components.get_video_and_audio_streams(info)
+        answer = inquirer.checkbox(
+            message="Select the streams you want to download:",
+            choices=menu_components.create_dynamic_stream_menu(streams),
+            transformer=menu_components.stream_menu_transformer,
+            long_instruction="Press Space to select/deselect a stream, and Enter to continue.",
+        ).execute()
 
         print(
             f"\nPlease select the folder where you want to {download_type} the videos: "
