@@ -1,17 +1,7 @@
 import os
 import sys
 import time
-from lib import settings, menu, utility
 from lib.utility import logger, installation_helper
-from lib.ui import InquirerMenu
-
-
-relative_path = os.path.dirname(os.path.abspath(__file__))
-os.chdir(relative_path)
-
-logger.debug(f"Changed working directory to {relative_path}")
-
-settings = settings.Settings()
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
@@ -21,6 +11,18 @@ except ImportError:
     )
     time.sleep(3)
     sys.exit(1)
+from lib import settings, menu, utility
+from lib.ui import InquirerMenu
+
+logger.debug("########### Starting YouTube Archiver ###########")
+
+relative_path = os.path.dirname(os.path.abspath(__file__))
+os.chdir(relative_path)
+
+logger.debug(f"Changed working directory to {relative_path}")
+
+settings = settings.Settings()
+
 
 if settings.ffmpeg_is_installed is False:
     logger.warning("ffmpeg is not installed.")
