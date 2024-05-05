@@ -9,3 +9,4 @@ class Settings:
             self.ffmpeg_is_installed = False
         self.logger = None  # type: logging.Logger
         self.download_type = None  # type: menu.DownloadType
+        self.is_playlist = False
