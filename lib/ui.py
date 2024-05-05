@@ -1,5 +1,7 @@
-from tkinter import Tk
+from tkinter import Tk, Button
 from tkinter.filedialog import askdirectory, askopenfilename
+from tkcalendar import Calendar
+from datetime import date
 from lib.utility import ChoiceEnum
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
@@ -13,8 +15,11 @@ class InquirerMenu:
 
     def validate_date(date: str) -> bool:
         pattern = r"^\d{4}-\d{2}-\d{2}"
-        if bool(re.match(pattern, date)):
-            date.strip("-")
+        if bool(
+            date == ""
+            or date.lower() in ["yesterday", "today"]
+            or re.match(pattern, date)
+        ):
             return True
         return False
 
@@ -80,7 +85,7 @@ class InquirerMenu:
 
     url_is_playlist_select = inquirer.select(
         message="The URL is a playlist. Please select which you'd like to download:",
-        Choices=[
+        choices=[
             Choice(value="all", name="Download all videos in the playlist"),
             Choice(value="index", name="Download a specific index in the playlist"),
             Choice(
@@ -93,7 +98,7 @@ class InquirerMenu:
 
     url_is_video_in_playlist_select = inquirer.select(
         message="The URL is a playlist. Please select which you'd like to download:",
-        Choices=[
+        choices=[
             Choice(value="all", name="Download all videos in the playlist"),
             Choice(value="index", name="Download a specific index in the playlist"),
             Choice(
@@ -118,16 +123,19 @@ class InquirerMenu:
     get_after_date = inquirer.text(
         message="Enter the start date (YYYY-MM-DD):",
         validate=validate_date,
+        instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
     )
 
     get_before_date = inquirer.text(
         message="Enter the end date (YYYY-MM-DD):",
         validate=validate_date,
+        instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
     )
 
     reverse_order_question = inquirer.confirm(
         message="Do you want to download the videos in reverse order?",
         default=False,
+        instruction="This wil NOT reverse the order of the playlist itself, only the download order.",
     )
 
     media_download_checkbox = inquirer.checkbox(
@@ -172,3 +180,29 @@ def select_file(filetypes: list[tuple[str, str]] = None) -> str:
         file = askopenfilename()
     root.destroy()
     return file
+
+
+def select_date():
+    """
+    Opens a calendar dialog box to select a date and returns the selected date.
+
+    Returns:
+        str: The selected date in the format YYYY-MM-DD.
+    """
+
+    def confirm_selection():
+        selected_date[0] = cal.selection_get()
+        root.destroy()
+
+    root = Tk()
+    root.title("Select a date")
+    cal = Calendar(root, selectmode="day", date_pattern="y-mm-dd")
+    cal.pack()
+
+    selected_date = [None]  # Use a mutable container to store the selected date
+    confirm_button = Button(root, text="Confirm", command=confirm_selection)
+    confirm_button.pack()
+
+    root.mainloop()
+    selected_date: date = selected_date[0]
+    return selected_date.strftime("%Y%m%d")
