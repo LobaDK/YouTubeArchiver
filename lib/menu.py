@@ -1,7 +1,9 @@
 from enum import Enum
 from pydantic import BaseModel, ConfigDict
 from textwrap import dedent
-from datetime import datetime
+from yt_dlp import YoutubeDL
+from yt_dlp.utils import DateRange
+from datetime import datetime, timedelta
 
 from lib import settings, ui, utility, menu_components
 from lib.utility import logger, ChoiceEnum
@@ -39,7 +41,7 @@ def menu(menu_param: MenuParam):
     download_type = (
         "download" if menu_param.download_type == DownloadType.DOWNLOAD else "archive"
     )
-    settings = menu_param.Settings  # noqa TODO: Remove noqa when used
+    settings = menu_param.Settings
     utility.clear()
     logger.debug(
         dedent(
@@ -52,7 +54,7 @@ def menu(menu_param: MenuParam):
 
     command_params = {}
     if settings.ffmpeg_is_installed:
-        command_params["--ffmpeg_location"] = settings.ffmpeg_location
+        command_params["ffmpeg_location"] = settings.ffmpeg_location
 
     go_back = False
 
@@ -87,7 +89,7 @@ def menu(menu_param: MenuParam):
                     logger.debug("User chose to return to the main menu.")
                     return
 
-            command_params["--output"] = folder
+            command_params["paths"] = {"home": folder}
 
             # Loop to get the desired archive file location
             print(
@@ -103,7 +105,6 @@ def menu(menu_param: MenuParam):
                         logger.debug("No archive file selected.")
                         answer = InquirerMenu.archive_file_select.execute()
                         if answer == ChoiceEnum.SELECT.value:
-                            logger.debug("User chose to select an archive file.")
                             continue  # Ask for the archive file again
                         elif answer == ChoiceEnum.BACK.value:
                             logger.debug("User chose to go back.")
@@ -111,11 +112,9 @@ def menu(menu_param: MenuParam):
                         elif answer == ChoiceEnum.MENU.value:
                             logger.debug("User chose to return to the main menu.")
                             return  # Return to the main menu
-                    command_params["--download-archive"] = archive_file
-                elif answer is False:
-                    command_params["--no-download-archive"] = ""
+                    logger.debug(f"Archive file selected: {archive_file}")
+                    command_params["download_archive"] = archive_file
 
-                go_back = False
                 # Check if the URL is a playlist or video in a playlist
                 while True:
                     if go_back is True:
@@ -123,6 +122,8 @@ def menu(menu_param: MenuParam):
                     if utility.url_is_only_playlist(
                         url
                     ) or utility.url_is_video_in_playlist(url):
+                        settings.is_playlist = True
+                        print("\n")
                         if utility.url_is_only_playlist(url):
                             answer = InquirerMenu.url_is_playlist_select.execute()
                         else:
@@ -144,29 +145,44 @@ def menu(menu_param: MenuParam):
                                         "The end index must be greater than or equal to the start index."
                                     )
                                     continue
-                                command_params["--playlist-start"] = start_index
-                                command_params["--playlist-end"] = end_index
+                                command_params["playliststart"] = start_index
+                                command_params["playlistend"] = end_index
                                 break
                         elif answer == "date":
                             while True:
-                                after_date = InquirerMenu.get_after_date.execute()
-                                before_date = InquirerMenu.get_before_date.execute()
-
-                                after_date_obj = datetime.strptime(after_date, "%Y%m%d")
-                                before_date_obj = datetime.strptime(
-                                    before_date, "%Y%m%d"
-                                )
-
-                                if after_date_obj > before_date_obj:
-                                    print(
-                                        "The before date must be greater than or equal to the after date."
+                                after_date: str = InquirerMenu.get_after_date.execute()
+                                if after_date == "":
+                                    after_date = ui.select_date()
+                                elif after_date in ["today", "yesterday"]:
+                                    after_date = datetime.now() - timedelta(
+                                        days=1 if after_date == "yesterday" else 0
                                     )
+                                    after_date = after_date.strftime("%Y%m%d")
+
+                                before_date: str = (
+                                    InquirerMenu.get_before_date.execute()
+                                )
+                                if before_date == "":
+                                    before_date = ui.select_date()
+                                elif before_date in ["today", "yesterday"]:
+                                    before_date = datetime.now() - timedelta(
+                                        days=1 if before_date == "yesterday" else 0
+                                    )
+                                    before_date = before_date.strftime("%Y%m%d")
+
+                                after_date = after_date.replace("-", "")
+                                before_date = before_date.replace("-", "")
+
+                                try:
+                                    date_range = DateRange(after_date, before_date)
+                                except ValueError as e:
+                                    print(str(e))
                                     continue
-                                command_params["--dateafter"] = after_date
-                                command_params["--datebefore"] = before_date
+
+                                command_params["daterange"] = date_range
                                 break
                         elif answer == "video":
-                            command_params["--no-playlist"] = ""
+                            command_params["no-playlist"] = True
                         elif answer == ChoiceEnum.BACK.value:
                             break
                         elif answer == ChoiceEnum.MENU.value:
@@ -174,6 +190,34 @@ def menu(menu_param: MenuParam):
 
                         question = InquirerMenu.reverse_order_question.execute()
                         if question is True:
-                            command_params["--playlist-reverse"] = ""
-                        elif question is False:
-                            command_params["--no-playlist-reverse"] = ""
+                            command_params["playlistreverse"] = True
+
+                    if menu_param.download_type == DownloadType.ARCHIVE:
+                        command_params["writedescription"] = True
+                        command_params["writeannotations"] = True
+                        command_params["writeinfojson"] = True
+                        command_params["writethumbnail"] = True
+                        command_params["writeurllink"] = True
+                        command_params["writewebloclink"] = True
+                        command_params["writedesktoplink"] = True
+                        command_params["writesubtitles"] = True
+                        command_params["allsubtitles"] = True
+                        command_params["overwrites"] = False
+                        if settings.is_playlist:
+                            if not command_params.get("no-playlist"):
+                                command_params["outtmpl"] = (
+                                    "%(playlist_title)s/%(uploader)s/%(upload_date)s - %(title)s/%(upload_date)s [%(id)s].%(ext)s"
+                                )
+                            else:
+                                command_params["outtmpl"] = (
+                                    "%(uploader)s/%(upload_date)s - %(title)s/%(upload_date)s [%(id)s].%(ext)s"
+                                )
+                        else:
+                            command_params["outtmpl"] = (
+                                "%(title)s - %(uploader)s - %(upload_date)s/%(uploader)s - %(upload_date)s [%(id)s].%(ext)s"
+                            )
+
+                    with YoutubeDL(command_params) as ytdlp:
+                        ytdlp.download([url])
+
+                    input("Press Enter to continue...")
