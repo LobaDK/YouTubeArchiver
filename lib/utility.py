@@ -10,6 +10,7 @@ import tqdm
 import certifi
 import pkg_resources
 
+from urllib.error import URLError
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from enum import Enum
@@ -209,15 +210,17 @@ class InstallationHelper:
         """
         try:
             pypi = CheeseShop()
+            versions = pypi.query_versions_pypi(package_name)
         except (
-            SSLCertVerificationError
+            SSLCertVerificationError,
+            URLError,
         ):  # Some systems can fail with SSL: CERTIFICATE_VERIFY_FAILED
             os.environ["SSL_CERT_FILE"] = certifi.where()
             self.logger.info(
                 "SSL certificate verification failed. Trying again after setting the SSL_CERT_FILE."
             )
             pypi = CheeseShop()
-        versions = pypi.query_versions_pypi(package_name)
+            versions = pypi.query_versions_pypi(package_name)
         if not versions:
             return None
         return versions[1][0]
