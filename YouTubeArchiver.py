@@ -67,5 +67,5 @@ functions = {
 # Main menu for the user
 while True:
     utility.clear()
-    main_menu_answer = InquirerMenu.main_menu_options.execute()
+    main_menu_answer = InquirerMenu.main_menu_options().execute()
     functions[main_menu_answer]()

@@ -23,69 +23,77 @@ class InquirerMenu:
             return True
         return False
 
-    main_menu_options = inquirer.select(
-        message="Select an option",
-        choices=[
-            Choice(value="D", name="Download videos"),
-            Choice(value="A", name="Archive videos"),
-            Choice(value="UD", name="Update yt-dlp"),
-            Choice(value="UA", name="Update YouTube Archiver"),
-            Choice(value="E", name="Exit"),
-        ],
-        default="D",
-        instruction="Use the arrow keys to navigate, press Enter to select",
-    )
+    def main_menu_options():
+        return inquirer.select(
+            message="Please select an option:",
+            choices=[
+                Choice(value="D", name="Download"),
+                Choice(value="A", name="Archive"),
+                Choice(value="UD", name="Update yt-dlp"),
+                Choice(value="UA", name="Update YouTube Archiver"),
+                Choice(value="E", name="Exit"),
+            ],
+            pointer=">",
+        )
 
-    ffmpeg_download_question = inquirer.confirm(
-        message="Do you want to download ffmpeg now?",
-        default=True,
-        instruction="It is not required, but it is highly recommended to have it installed. ",
-    )
+    def ffmpeg_download_question():
+        return inquirer.confirm(
+            message="Do you want to download ffmpeg?",
+            default=True,
+        )
 
-    continue_without_ffmpeg_question = inquirer.confirm(
-        message="Do you want to continue without ffmpeg?",
-        default=False,
-    )
+    def continue_without_ffmpeg_question():
+        return inquirer.confirm(
+            message="Do you want to continue without ffmpeg?",
+            default=False,
+        )
 
-    youtube_url_input = inquirer.text(
-        message="Enter the URL of the video or playlist to download/archive:",
-        validate=validate_youtube_url,
-    )
+    def youtube_url_input():
+        return inquirer.text(
+            message="Enter a YouTube URL:",
+            validate=InquirerMenu.validate_youtube_url,
+        )
 
-    youtube_url_select = inquirer.select(
-        message="Please select an option:",
-        choices=[
-            Choice(value=ChoiceEnum.SELECT.value, name="Select a URL"),
-            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
-        ],
-    )
+    def youtube_url_select():
+        return inquirer.select(
+            message="Please select an option:",
+            choices=[
+                Choice(value=ChoiceEnum.SELECT.value, name="Select a URL"),
+                Choice(value=ChoiceEnum.BACK.value, name="Back"),
+            ],
+            pointer=">",
+        )
 
-    download_folder_select = inquirer.select(
-        message="Please select an option:",
-        choices=[
-            Choice(value=ChoiceEnum.SELECT.value, name="Select a folder"),
-            Choice(value=ChoiceEnum.BACK.value, name="Back"),
-            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
-        ],
-    )
+    def download_folder_select():
+        return inquirer.select(
+            message="Please select an option:",
+            choices=[
+                Choice(value=ChoiceEnum.SELECT.value, name="Select a folder"),
+                Choice(value=ChoiceEnum.BACK.value, name="Back"),
+                Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+            ],
+            pointer=">",
+        )
 
-    use_archive_file_question = inquirer.confirm(
-        message="Do you want to use an archive file?",
-        default=True,
-    )
+    def use_archive_file_question():
+        return inquirer.confirm(
+            message="Do you want to use an archive file?",
+            default=True,
+        )
 
-    archive_file_select = inquirer.select(
-        message="Please select an option:",
-        choices=[
-            Choice(value=ChoiceEnum.SELECT.value, name="Select an archive file"),
-            Choice(value=ChoiceEnum.BACK.value, name="Back"),
-            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
-        ],
-    )
+    def archive_file_select():
+        return inquirer.select(
+            message="Please select an option:",
+            choices=[
+                Choice(value=ChoiceEnum.SELECT.value, name="Select an archive file"),
+                Choice(value=ChoiceEnum.BACK.value, name="Back"),
+                Choice(value=ChoiceEnum.MENU.value, name="Menu"),
+            ],
+            pointer=">",
+        )
 
-    url_is_playlist_select = inquirer.select(
-        message="The URL is a playlist. Please select which you'd like to download:",
-        choices=[
+    def url_is_playlist_select(url_is_video_in_playlist: bool):
+        choices = [
             Choice(value="all", name="Download all videos in the playlist"),
             Choice(value="index", name="Download a specific index in the playlist"),
             Choice(
@@ -93,58 +101,135 @@ class InquirerMenu:
             ),
             Choice(value=ChoiceEnum.BACK.value, name="Back"),
             Choice(value=ChoiceEnum.MENU.value, name="Menu"),
-        ],
-    )
+        ]
 
-    url_is_video_in_playlist_select = inquirer.select(
-        message="The URL is a playlist. Please select which you'd like to download:",
-        choices=[
-            Choice(value="all", name="Download all videos in the playlist"),
-            Choice(value="index", name="Download a specific index in the playlist"),
+        if url_is_video_in_playlist:
+            choices.insert(3, Choice(value="video", name="Download the single video"))
+
+        return inquirer.select(
+            message="The URL is a playlist. Please select which you'd like to download:",
+            choices=choices,
+            pointer=">",
+        )
+
+    def get_playlist_start_index():
+        return inquirer.text(
+            message="Enter the start index of the playlist:",
+            validate=lambda x: x.isdigit(),
+        )
+
+    def get_playlist_end_index():
+        return inquirer.text(
+            message="Enter the end index of the playlist:",
+            validate=lambda x: x.isdigit(),
+        )
+
+    def get_after_date():
+        return inquirer.text(
+            message="Enter the start date (YYYY-MM-DD):",
+            validate=InquirerMenu.validate_date,
+            instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
+        )
+
+    def get_before_date():
+        return inquirer.text(
+            message="Enter the end date (YYYY-MM-DD):",
+            validate=InquirerMenu.validate_date,
+            instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
+        )
+
+    def reverse_order_question():
+        return inquirer.confirm(
+            message="Do you want to download the videos in reverse order?",
+            default=False,
+        )
+
+    def stream_type_checkbox():
+        return inquirer.checkbox(
+            message="Select the stream types to download:",
+            choices=[
+                Choice(value="audio", name="Audio", enabled=True),
+                Choice(value="video", name="Video", enabled=True),
+            ],
+            pointer=">",
+            enabled_symbol="[x]",
+            disabled_symbol="[ ]",
+            validate=lambda x: len(x) > 0,
+            invalid_message="Please select at least one stream type.",
+        )
+
+    def stream_select_mode(is_audio_selected: bool, is_video_selected: bool):
+        choices = []
+        if is_audio_selected and not is_video_selected:
+            choices.append(
+                Choice(value="bestaudio", name="Select best auto-detected audio stream")
+            )
+            choices.append(
+                Choice(
+                    value="worstaudio", name="Select worst auto-detected audio stream"
+                )
+            )
+        elif is_video_selected and not is_audio_selected:
+            choices.append(
+                Choice(value="bestvideo", name="Select best auto-detected video stream")
+            )
+            choices.append(
+                Choice(
+                    value="worstvideo", name="Select worst auto-detected video stream"
+                )
+            )
+        else:
+            choices.append(
+                Choice(
+                    value="bestva",
+                    name="Select best auto-detected video and audio. (Default - Highest quality)",
+                )
+            )
+            choices.append(
+                Choice(
+                    value="worstva",
+                    name="Select worst auto-detected video and audio.",
+                )
+            )
+            choices.append(
+                Choice(
+                    value="best",
+                    name="Select best auto-detected stream with pre-merged audio",
+                )
+            )
+            choices.append(
+                Choice(
+                    value="worst",
+                    name="Select worst auto-detected stream with pre-merged audio",
+                )
+            )
+
+        choices.append(
             Choice(
-                value="date", name="Download videos uploaded on a specific date range"
-            ),
-            Choice(value="video", name="Download the single video"),
-            Choice(value=ChoiceEnum.BACK.value, name="Back"),
-            Choice(value=ChoiceEnum.MENU.value, name="Menu"),
-        ],
-    )
+                value="manual",
+                name="Select streams manually (Advanced - Automatic merging is disabled)",
+            )
+        )
 
-    get_playlist_start_index = inquirer.text(
-        message="Enter the start index of the playlist:",
-        validate=lambda x: x.isdigit(),
-    )
+        return inquirer.select(
+            message="Please select an option:",
+            choices=choices,
+            pointer=">",
+        )
 
-    get_playlist_end_index = inquirer.text(
-        message="Enter the end index of the playlist:",
-        validate=lambda x: x.isdigit(),
-    )
-
-    get_after_date = inquirer.text(
-        message="Enter the start date (YYYY-MM-DD):",
-        validate=validate_date,
-        instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
-    )
-
-    get_before_date = inquirer.text(
-        message="Enter the end date (YYYY-MM-DD):",
-        validate=validate_date,
-        instruction="Press enter without typing anything to bring up the calendar. Type 'yesterday' or 'today' to select the respective date.",
-    )
-
-    reverse_order_question = inquirer.confirm(
-        message="Do you want to download the videos in reverse order?",
-        default=False,
-        instruction="This wil NOT reverse the order of the playlist itself, only the download order.",
-    )
-
-    media_download_checkbox = inquirer.checkbox(
-        message="Select the media types you want to download:",
-        choices=[
-            Choice(value="audio", name="Audio"),
-            Choice(value="video", name="Video"),
-        ],
-    )
+    def stream_combine_question():
+        return inquirer.select(
+            message="Select an option:",
+            choices=[
+                Choice(value="merge", name="Merge audio and video"),
+                Choice(
+                    value="mergeandkeep",
+                    name="Merge audio and video, keep separate files",
+                ),
+                Choice(value="separate", name="Keep audio and video separate"),
+            ],
+            pointer=">",
+        )
 
 
 def select_folder():

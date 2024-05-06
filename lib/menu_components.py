@@ -51,6 +51,7 @@ def create_dynamic_stream_menu(
     Yields:
         Generator[Choice, None, None]: A generator that yields Choice objects representing the stream menu options.
     """
+    yield Choice(value="all", name="All streams")
     for stream in streams:
         stream_string = convert_stream_to_string(stream)
         yield Choice(value=stream["format_id"], name=stream_string)
@@ -86,7 +87,8 @@ def convert_stream_to_string(stream: dict[str, Any]) -> str:
 
 
 def get_video_and_audio_streams(
-    info: dict[str, list[dict[str, Any]]]
+    info: dict[str, list[dict[str, Any]]],
+    stream_types: list[str],
 ) -> list[dict[str, Any]]:
     """
     Retrieves the video and audio streams from the given info dictionary.
@@ -100,8 +102,8 @@ def get_video_and_audio_streams(
     """
     streams = []
     for stream in info["formats"]:
-        if stream.get("acodec") != "none" or stream.get("vcodec") != "none":
-            logger.debug(f"Video and audio stream found: {stream['format_id']}")
+        if (stream.get("acodec") != "none" and "audio" in stream_types) or (stream.get("vcodec") != "none" and "video" in stream_types):
+            logger.debug(f"Stream found: {stream['format_id']}")
             streams.append(stream)
     return streams
 
@@ -123,6 +125,7 @@ def get_video_info(url: str) -> dict | None:
     ) as ytdlp:
         try:
             info = ytdlp.extract_info(url, download=False)
+            info = ytdlp.sanitize_info(info)
             return info
         except DownloadError as e:
             logger.error(e)

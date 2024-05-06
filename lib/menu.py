@@ -61,25 +61,15 @@ def menu(menu_param: MenuParam):
 
     # Loop to get the URL of the video or playlist to download
     while True:
-        url = InquirerMenu.youtube_url_input.execute()
+        url = InquirerMenu.youtube_url_input().execute()
         if not menu_components.url_is_valid(url):
-            answer = InquirerMenu.youtube_url_select.execute()
+            answer = InquirerMenu.youtube_url_select().execute()
             if answer == ChoiceEnum.SELECT.value:
                 continue  # Ask for the URL again
             elif answer == ChoiceEnum.MENU.value:
                 return  # Return to the main menu
 
         settings.url = url
-
-        # TODO: Move this to a more appropriate location. Also add a validate that requires the user to select at least one stream.
-        info = menu_components.get_video_info(url)
-        streams = menu_components.get_video_and_audio_streams(info)
-        answer = inquirer.checkbox(
-            message="Select the streams you want to download:",
-            choices=menu_components.create_dynamic_stream_menu(streams),
-            transformer=menu_components.stream_menu_transformer,
-            long_instruction="Press Space to select/deselect a stream, and Enter to continue.",
-        ).execute()
 
         print(
             f"\nPlease select the folder where you want to {download_type} the videos: "
@@ -89,7 +79,7 @@ def menu(menu_param: MenuParam):
             folder = ui.select_folder()
             if not folder:
                 logger.debug("No folder selected.")
-                answer = InquirerMenu.download_folder_select.execute()
+                answer = InquirerMenu.download_folder_select().execute()
                 if answer == ChoiceEnum.SELECT.value:
                     logger.debug("User chose to select a folder.")
                     continue  # Ask for the folder again
@@ -107,14 +97,14 @@ def menu(menu_param: MenuParam):
                 f"\nyt-dlp supports using an archive file to keep track of {download_type + ('ed' if menu_param.download_type == DownloadType.DOWNLOAD else 'd')} videos. It defaults to 'archive.txt'."
             )
             while True:
-                answer = InquirerMenu.use_archive_file_question.execute()
+                answer = InquirerMenu.use_archive_file_question().execute()
                 if answer is True:
                     logger.debug("User chose to use an archive file.")
                     print("\nPlease select the archive file: ")
                     archive_file = ui.select_file(filetypes=[("Text files", "*.txt")])
                     if not archive_file:
                         logger.debug("No archive file selected.")
-                        answer = InquirerMenu.archive_file_select.execute()
+                        answer = InquirerMenu.archive_file_select().execute()
                         if answer == ChoiceEnum.SELECT.value:
                             continue  # Ask for the archive file again
                         elif answer == ChoiceEnum.BACK.value:
@@ -136,20 +126,20 @@ def menu(menu_param: MenuParam):
                         settings.is_playlist = True
                         print("\n")
                         if utility.url_is_only_playlist(url):
-                            answer = InquirerMenu.url_is_playlist_select.execute()
+                            answer = InquirerMenu.url_is_playlist_select().execute()
                         else:
                             answer = (
-                                InquirerMenu.url_is_video_in_playlist_select.execute()
+                                InquirerMenu.url_is_video_in_playlist_select().execute()
                             )
                         if answer == "all":
                             pass
                         elif answer == "index":
                             while True:
                                 start_index = (
-                                    InquirerMenu.get_playlist_start_index.execute()
+                                    InquirerMenu.get_playlist_start_index().execute()
                                 )
                                 end_index = (
-                                    InquirerMenu.get_playlist_end_index.execute()
+                                    InquirerMenu.get_playlist_end_index().execute()
                                 )
                                 if start_index > end_index:
                                     print(
@@ -161,7 +151,9 @@ def menu(menu_param: MenuParam):
                                 break
                         elif answer == "date":
                             while True:
-                                after_date: str = InquirerMenu.get_after_date.execute()
+                                after_date: str = (
+                                    InquirerMenu.get_after_date().execute()
+                                )
                                 after_date = after_date.lower()
                                 if after_date == "":
                                     after_date = ui.select_date()
@@ -172,7 +164,7 @@ def menu(menu_param: MenuParam):
                                     after_date = after_date.strftime("%Y%m%d")
 
                                 before_date: str = (
-                                    InquirerMenu.get_before_date.execute()
+                                    InquirerMenu.get_before_date().execute()
                                 )
                                 before_date = before_date.lower()
                                 if before_date == "":
@@ -201,9 +193,37 @@ def menu(menu_param: MenuParam):
                         elif answer == ChoiceEnum.MENU.value:
                             return
 
-                        question = InquirerMenu.reverse_order_question.execute()
+                        question = InquirerMenu.reverse_order_question().execute()
                         if question is True:
                             command_params["playlistreverse"] = True
+
+                    print("\n")
+                    stream_types: list[str] = (
+                        InquirerMenu.stream_type_checkbox().execute()
+                    )
+
+                    print("\n")
+                    stream_select_mode = InquirerMenu.stream_select_mode(
+                        "audio" in stream_types, "video" in stream_types
+                    ).execute()
+                    if stream_select_mode == "manual":
+                        info = menu_components.get_video_info(url)
+                        streams = menu_components.get_video_and_audio_streams(
+                            info, stream_types
+                        )
+                        utility.clear()
+                        answer = inquirer.checkbox(
+                            message="Select the streams you want to download:",
+                            choices=menu_components.create_dynamic_stream_menu(streams),
+                            transformer=menu_components.stream_menu_transformer,
+                            instruction="\n      [ID]     [ext]     [res]      [FPS]    [size]     [acodec]       [vcodec]     [abrate]   [vbrate]",
+                            long_instruction="Press Space to select/deselect a stream, and Enter to continue.",
+                            validate=lambda x: len(x) > 0,
+                            invalid_message="Please select at least one stream.",
+                            pointer=">",
+                            enabled_symbol="[x]",
+                            disabled_symbol="[ ]",
+                        ).execute()
 
                     if menu_param.download_type == DownloadType.ARCHIVE:
                         command_params["writedescription"] = True
