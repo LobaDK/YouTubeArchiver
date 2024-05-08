@@ -7,10 +7,12 @@ from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 import re
 
+StrOrBytesPath = str | bytes
+
 
 class InquirerMenu:
     def validate_youtube_url(url: str) -> bool:
-        pattern = r"^https://(www\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/playlist\?list=.+(&.+)?|youtu\.be/.+(&.+)?|music\.youtube\.com/watch\?v=.{11}(&.+)?|m\.youtube\.com/watch\?v=.{11}(&.+)?)$"
+        pattern = r"^https://(www\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/playlist\?list=.+(&.+)?|youtu\.be/.+(&.+)?|music\.youtube\.com/watch\?v=.{11}(&.+)?|m\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/@.+)$"
         return bool(re.match(pattern, url))
 
     def validate_date(date: str) -> bool:
@@ -52,6 +54,8 @@ class InquirerMenu:
         return inquirer.text(
             message="Enter a YouTube URL:",
             validate=InquirerMenu.validate_youtube_url,
+            mandatory=False,
+            long_instruction="Press CTRL+Z to skip and return to the main menu.",
         )
 
     def youtube_url_select():
@@ -246,12 +250,15 @@ def select_folder():
     return folder
 
 
-def select_file(filetypes: list[tuple[str, str]] = None) -> str:
+def select_file(
+    filetypes: list[tuple[str, str]] = None, default_filename: StrOrBytesPath = None
+) -> str:
     """
     Opens a file dialog to allow the user to select a file.
 
     Args:
         filetypes (list[tuple[str, str]], optional): A list of file types to filter the displayed files. Each file type is represented as a tuple of the form (file type description, file extension). Defaults to None.
+        default_filename (StrOrBytesPath, optional): The default filename to display in the dialog. Defaults to None.
 
     Returns:
         str: The path of the selected file.
@@ -259,10 +266,12 @@ def select_file(filetypes: list[tuple[str, str]] = None) -> str:
     """
     root = Tk()
     root.withdraw()
-    if filetypes is not None:
-        file = askopenfilename(filetypes=filetypes)
-    else:
-        file = askopenfilename()
+    args = {}
+    if filetypes:
+        args["filetypes"] = filetypes
+    if default_filename:
+        args["initialfile"] = default_filename
+    file = askopenfilename(**args)
     root.destroy()
     return file
 

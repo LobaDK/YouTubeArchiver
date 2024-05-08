@@ -52,12 +52,12 @@ else:
 
 # Functions for the main menu options
 functions = {
-    "D": lambda: menu.menu(
+    "D": lambda: menu.Menu(
         menu.MenuParam(Settings=settings, download_type=menu.DownloadType.DOWNLOAD)
-    ),
-    "A": lambda: menu.menu(
+    ).main_menu(),
+    "A": lambda: menu.Menu(
         menu.MenuParam(Settings=settings, download_type=menu.DownloadType.ARCHIVE)
-    ),
+    ).main_menu(),
     "UD": installation_helper.update_ytdlp,
     "UA": installation_helper.update_youtube_archiver,
     "E": sys.exit,
