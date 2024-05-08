@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 from InquirerPy.separator import Separator
-from typing import Generator
 
 from lib import settings, ui, utility, menu_components
 from lib.utility import logger, ChoiceEnum
@@ -46,7 +45,7 @@ class Menu:
         )
         self._settings = menu_param.Settings
 
-    def set_appropriate_settings(self):
+    def set_download_mode_settings(self):
         """
         Sets the appropriate settings based on the download type and other settings.
         """
@@ -113,59 +112,72 @@ class Menu:
                 return False
         return True
 
-    def main_menu_constructor(self) -> Generator[Choice, None, None]:
+    def main_menu_constructor(self) -> list[Choice]:
         """
-        Constructs the main menu for the YouTubeArchiver application.
+        Dynamically constructs the main menu for the application based on the current settings.
 
-        Yields:
-            List[Choice]: A list of Choice objects representing the main menu options.
+        Returns:
+            list[Choice]: A list of Choice objects representing the main menu options.
         """
-        yield [
+        choices = []
+        choices.append(
             Choice(
                 value="select_url",
                 name=f"Select URL: {'*' if not self._settings.url else self._settings.url}",
             )
-        ]
-        if self._settings.url:
-            yield [
-                Separator(),
+        )
+        if (
+            self._settings.url
+        ):  # Only show the rest of the options if a URL has been selected
+            choices.append(
+                Separator()
+            )  # Add a separator between the URL and folder selection
+            choices.append(
                 Choice(
                     value="select_folder",
                     name=f"Select Folder: {'*' if not self._settings.download_folder else self._settings.download_folder}",
-                ),
-                Separator(),
+                )
+            )
+            choices.append(
+                Separator()
+            )  # Add a separator between the folder and archive file selection
+            choices.append(
                 Choice(
                     value="use_archive_file",
                     name=f"Use Archive File: {menu_components.format_boolean(self._settings.use_archive_file)}",
-                ),
-            ]
-            if self._settings.use_archive_file:
-                yield [
+                )
+            )
+            if (
+                self._settings.use_archive_file
+            ):  # Only show the archive file option if the user wants to use an archive file
+                choices.append(
                     Choice(
                         value="archive_file",
                         name=f"Archive File: {'*' if not self._settings.archive_file else self._settings.archive_file}",
-                    ),
-                ]
-            yield [Separator()]
+                    )
+                )
+            choices.append(
+                Separator()
+            )  # Add a separator between the archive file and playlist options
             if (
                 self._settings.url_is_playlist
                 or self._settings.url_is_video_in_playlist
             ):
-                yield [
+                choices.append(
                     Choice(
                         value="playlist_options",
                         name=f"Playlist Options: {self._settings.playlist_options}",
-                    ),
-                ]
+                    )
+                )
             if self._settings.url_is_channel:
-                yield [
+                choices.append(
                     Choice(
                         value="channel_options",
                         name=f"Channel Options: {self._settings.channel_options}",
-                    ),
-                ]
+                    )
+                )
             if (
-                not (  # If the URL is not *only* a playlist, a video in a playlist, or a channel
+                not (  # If the URL is not a playlist, a video in a playlist, or a channel
                     self._settings.url_is_playlist
                     and not self._settings.url_is_video_in_playlist
                     and not self._settings.url_is_channel
@@ -173,50 +185,53 @@ class Menu:
                 or self._settings.expected_download_count
                 == 1  # If we're expecting to download only one video
             ):
-                yield [
+                choices.append(
                     Choice(
                         value="download_sections",
                         name=f"Download Sections of the video: {self._settings.download_sections if self._settings.download_sections else 'None selected'}",
+                    )
+                )
+                choices.append(Separator())
+            choices.extend(
+                [
+                    Choice(
+                        value="stream_types",
+                        name=f"Stream Types: {menu_components.format_stream_types(self._settings.stream_types) if self._settings.stream_types else '*'}",
+                    ),
+                    Choice(
+                        value="stream_select_mode",
+                        name=f"Stream Select Mode: {self._settings.stream_select_mode.capitalize()}",
+                    ),
+                    Choice(
+                        value="combine_streams",
+                        name=f"Combine Streams: {menu_components.format_boolean(self._settings.combine_streams)}",
+                    ),
+                    Choice(
+                        value="stream_select_formats",
+                        name=f"Stream Formats: {menu_components.format_stream_formats(self._settings.stream_formats, self._settings.combine_streams) if self._settings.stream_formats else '*'}",
                     ),
                     Separator(),
+                    Choice(
+                        value="output_template",
+                        name=f"Output Template: {self._settings.output_template}",
+                    ),
                 ]
-            yield [
-                Choice(
-                    value="stream_types",
-                    name=f"Stream Types: {menu_components.format_stream_types(self._settings.stream_types) if self._settings.stream_types else '*'}",
-                ),
-                Choice(
-                    value="stream_select_mode",
-                    name=f"Stream Select Mode: {self._settings.stream_select_mode.capitalize()}",
-                ),
-                Choice(
-                    value="combine_streams",
-                    name=f"Combine Streams: {menu_components.format_boolean(self._settings.combine_streams)}",
-                ),
-                Choice(
-                    value="stream_select_formats",
-                    name=f"Stream Formats: {menu_components.format_stream_formats(self._settings.stream_formats, self._settings.combine_streams) if self._settings.stream_formats else '*'}",
-                ),
-                Separator(),
-                Choice(
-                    value="output_template",
-                    name=f"Output Template: {self._settings.output_template}",
-                ),
-            ]
+            )
             if self._menu_param.download_type == DownloadType.ARCHIVE:
-                yield [
+                choices.append(
                     Choice(
                         value="archive_options",
                         name=f"Archive Options: {self._settings.archive_options}",
-                    ),
-                ]
+                    )
+                )
             if self.check_required_settings():
-                yield [
+                choices.append(
                     Choice(
                         value="download",
                         name=f"Start {self._download_type.capitalize()}",
-                    ),
-                ]
+                    )
+                )
+        return [choices]
 
     def get_default_choice(self, choices: list[Choice]) -> str:
         """
@@ -234,10 +249,9 @@ class Menu:
 
         """
         for choice in choices:
-            if isinstance(choice, Separator):
-                continue
-            if "*" in choice.name:
-                return choice.value
+            if isinstance(choice, Choice):
+                if "*" in choice.name:
+                    return choice.value
         return choices[0].value
 
     def main_menu(self):
@@ -293,8 +307,8 @@ class Menu:
             ),
             "download": lambda: self.menu(self._menu_param),
         }
+        self.set_download_mode_settings()
         while True:
-            self.set_appropriate_settings()
             utility.clear()
             main_menu_choices = []
             for choices in self.main_menu_constructor():
