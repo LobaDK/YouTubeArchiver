@@ -34,6 +34,11 @@ class MenuParam(BaseModel):
         arbitrary_types_allowed = True
 
 
+keybindings = {
+    "skip": [{"key": "c-z"}, {"key": "b"}, {"key": "backspace"}],
+}
+
+
 class Menu:
     def __init__(self, menu_param: MenuParam):
         self._menu_param = menu_param
@@ -176,46 +181,12 @@ class Menu:
                         name=f"Channel Options: {self._settings.channel_options}",
                     )
                 )
-            if (
-                not (  # If the URL is not a playlist, a video in a playlist, or a channel
-                    self._settings.url_is_playlist
-                    and not self._settings.url_is_video_in_playlist
-                    and not self._settings.url_is_channel
+            choices.append(Separator())
+            choices.append(
+                Choice(
+                    value="download_options",
+                    name="Download Options:",  # TODO: Display a * if not all required sub-menu settings are set. This will require a function to check if all required settings are set.
                 )
-                or self._settings.expected_download_count
-                == 1  # If we're expecting to download only one video
-            ):
-                choices.append(
-                    Choice(
-                        value="download_sections",
-                        name=f"Download Sections of the video: {self._settings.download_sections if self._settings.download_sections else 'None selected'}",
-                    )
-                )
-                choices.append(Separator())
-            choices.extend(
-                [
-                    Choice(
-                        value="stream_types",
-                        name=f"Stream Types: {menu_components.format_stream_types(self._settings.stream_types) if self._settings.stream_types else '*'}",
-                    ),
-                    Choice(
-                        value="stream_select_mode",
-                        name=f"Stream Select Mode: {self._settings.stream_select_mode.capitalize()}",
-                    ),
-                    Choice(
-                        value="combine_streams",
-                        name=f"Combine Streams: {menu_components.format_boolean(self._settings.combine_streams)}",
-                    ),
-                    Choice(
-                        value="stream_select_formats",
-                        name=f"Stream Formats: {menu_components.format_stream_formats(self._settings.stream_formats, self._settings.combine_streams) if self._settings.stream_formats else '*'}",
-                    ),
-                    Separator(),
-                    Choice(
-                        value="output_template",
-                        name=f"Output Template: {self._settings.output_template}",
-                    ),
-                ]
             )
             if self._menu_param.download_type == DownloadType.ARCHIVE:
                 choices.append(
@@ -227,8 +198,8 @@ class Menu:
             if self.check_required_settings():
                 choices.append(
                     Choice(
-                        value="download",
-                        name=f"Start {self._download_type.capitalize()}",
+                        value="start_download",
+                        name=f"start {self._download_type.capitalize()}",
                     )
                 )
         return [choices]
@@ -237,22 +208,77 @@ class Menu:
         """
         Returns the default choice from the given list of choices.
 
-        The default choice is determined by finding the first choice that contains
-        an asterisk (*) in its name. If no such choice is found, the first choice in
-        the list is considered the default choice.
+        The default choice is determined by the following rules:
+        - The first choice containing "*" is returned.
+        - If no choice contains "*", and all required settings are set, the "start download" choice is returned.
+        - If no choice contains "*", and not all required settings are set, the first choice is returned.
 
         Args:
-            choices (list[Choice]): A list of Choice objects representing the available choices.
+            choices (list[Choice]): The list of choices to select from.
 
         Returns:
-            str: The value of the default choice.
+            str: The default choice.
 
         """
         for choice in choices:
             if isinstance(choice, Choice):
                 if "*" in choice.name:
                     return choice.value
+        if self.check_required_settings():
+            return "start_download"
         return choices[0].value
+
+    def download_options_menu(self):
+        """
+        Menu for setting download options.
+        """
+        download_options_actions = {
+            "stream_types": lambda: setattr(
+                self._settings,
+                "stream_types",
+                menu_components.get_stream_types(),
+            ),
+            "stream_select_mode": lambda: setattr(
+                self._settings,
+                "stream_select_mode",
+                menu_components.get_stream_select_mode(),
+            ),
+            "combine_streams": lambda: setattr(
+                self._settings,
+                "combine_streams",
+                not self._settings.combine_streams,
+            ),
+            "stream_select_formats": lambda: setattr(
+                self._settings,
+                "stream_formats",
+                menu_components.get_stream_formats(
+                    self._settings.stream_types, self._settings.combine_streams
+                ),
+            ),
+            "output_template": lambda: setattr(
+                self._settings,
+                "output_template",
+                menu_components.get_output_template(self._settings.output_template),
+            ),
+        }
+        while True:
+            utility.clear()
+            download_options_choices = []
+            for choices in self.main_menu_constructor():
+                download_options_choices.extend(choices)
+            download_options_choice = inquirer.select(
+                message="Select an option to configure:",
+                choices=download_options_choices,
+                default=self.get_default_choice(download_options_choices),
+                pointer=">",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press CTRL+Z or 'B' to return to the main menu.",
+                keybindings=keybindings,
+            ).execute()
+
+            if download_options_choice in download_options_actions:
+                download_options_actions[download_options_choice]()
+            elif download_options_choice is None:
+                return
 
     def main_menu(self):
         logger.debug(
@@ -279,33 +305,13 @@ class Menu:
             "channel_options": lambda: setattr(
                 self._settings, "channel_options", menu_components.get_channel_options()
             ),
-            "download_sections": lambda: setattr(
-                self._settings,
-                "download_sections",
-                menu_components.get_download_sections(),
-            ),
-            "stream_types": lambda: setattr(
-                self._settings, "stream_types", menu_components.get_stream_types()
-            ),
-            "combine_streams": lambda: setattr(
-                self._settings, "combine_streams", not self._settings.combine_streams
-            ),
-            "stream_select_mode": lambda: setattr(
-                self._settings,
-                "stream_select_mode",
-                menu_components.get_stream_select_mode(),
-            ),
-            "output_template": lambda: setattr(
-                self._settings,
-                "output_template",
-                menu_components.get_output_template(),
-            ),
+            "download_options": lambda: self.download_options_menu(),
             "archive_options": lambda: setattr(
                 self._settings,
                 "archive_options",
                 menu_components.get_archive_options(),
             ),
-            "download": lambda: self.menu(self._menu_param),
+            "download": lambda: self.download(),
         }
         self.set_download_mode_settings()
         while True:
@@ -314,15 +320,14 @@ class Menu:
             for choices in self.main_menu_constructor():
                 main_menu_choices.extend(choices)
             print(f"Download type: {self._download_type.capitalize()}\n")
-            main_menu_choice = None  # Reset the main menu choice each time the user returns to the main menu
             main_menu_choice = inquirer.select(
-                message=f"{'Please start by selecting a URL' if not self._settings.url else ''}",
+                message=f"{'Please start by selecting a URL:' if not self._settings.url else 'Options marked with a * are required and have not been set yet.'}",
                 choices=main_menu_choices,
                 default=self.get_default_choice(main_menu_choices),
                 pointer=">",
-                instruction="Options marked with a * are required and haven't been set yet.",
-                long_instruction="Use the arrow keys to navigate, and Enter to select. Press CTRL+Z to return to the start menu.",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press CTRL+Z or 'B' to return to the main menu.",
                 mandatory=False,
+                keybindings=keybindings,
             ).execute()
 
             if main_menu_choice in main_menu_actions:
