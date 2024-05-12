@@ -2,6 +2,8 @@ import os
 import sys
 import time
 from lib.utility import logger, installation_helper
+from InquirerPy import inquirer
+from prompt_toolkit.completion import FuzzyWordCompleter
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
@@ -13,6 +15,49 @@ except ImportError:
     sys.exit(1)
 from lib import settings, menu, utility
 from lib.ui import InquirerMenu
+
+test_completer = FuzzyWordCompleter(
+    [
+        "%(title)s",
+        "%(ext)s" "%(id)s",
+        "%(uploader)s",
+        "%(uploader_id)s",
+        "%(upload_date)s",
+        "%(view_count)s",
+        "%(like_count)s",
+        "%(dislike_count)s",
+        "%(average_rating)s",
+        "%(duration)s",
+        "%(is_live)s",
+        "%(start_time)s",
+        "%(end_time)s",
+        "%(format)s",
+        "%(format_id)s",
+        "%(url)s",
+        "%(ext)s",
+        "%(format_note)s",
+        "%(format_note)s",
+        "%(acodec)s",
+        "%(vcodec)s",
+        "%(abr)s",
+        "%(vbr)s",
+        "%(asr)s",
+        "%(fps)s",
+        "%(tbr)s",
+        "%(resolution)s",
+        "%(filesize)s",
+        "%(container)s",
+        "%(protocol)s",
+        "%(extractor)s",
+        "%(extractor_key)s",
+    ]
+)
+
+test = inquirer.text(
+    message="Enter a template",
+    completer=test_completer,
+    validate=lambda result: len(result) > 0,
+).execute()
 
 logger.debug("########### Starting YouTube Archiver ###########")
 
