@@ -12,7 +12,7 @@ StrOrBytesPath = str | bytes
 
 class InquirerMenu:
     def validate_youtube_url(url: str) -> bool:
-        pattern = r"^https://(www\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/playlist\?list=.+(&.+)?|youtu\.be/.+(&.+)?|music\.youtube\.com/watch\?v=.{11}(&.+)?|m\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/@.+)$"
+        pattern = r"^https://(www\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/playlist\?list=.+(&.+)?|youtu\.be/.+(&.+)?|music\.youtube\.com/watch\?v=.{11}(&.+)?|m\.youtube\.com/watch\?v=.{11}(&.+)?|www\.youtube\.com/@[^/]+/(videos|shorts|playlists|community)(&.+)?)$"
         return bool(re.match(pattern, url))
 
     def validate_date(date: str) -> bool:
