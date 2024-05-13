@@ -1,9 +1,7 @@
 import os
 import sys
 import time
-from lib.utility import logger, installation_helper
-from InquirerPy import inquirer
-from prompt_toolkit.completion import FuzzyWordCompleter
+from lib.utility import logger, installation_helper, ffmpeg_is_installed
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
@@ -16,49 +14,6 @@ except ImportError:
 from lib import settings, menu, utility
 from lib.ui import InquirerMenu
 
-test_completer = FuzzyWordCompleter(
-    [
-        "%(title)s",
-        "%(ext)s" "%(id)s",
-        "%(uploader)s",
-        "%(uploader_id)s",
-        "%(upload_date)s",
-        "%(view_count)s",
-        "%(like_count)s",
-        "%(dislike_count)s",
-        "%(average_rating)s",
-        "%(duration)s",
-        "%(is_live)s",
-        "%(start_time)s",
-        "%(end_time)s",
-        "%(format)s",
-        "%(format_id)s",
-        "%(url)s",
-        "%(ext)s",
-        "%(format_note)s",
-        "%(format_note)s",
-        "%(acodec)s",
-        "%(vcodec)s",
-        "%(abr)s",
-        "%(vbr)s",
-        "%(asr)s",
-        "%(fps)s",
-        "%(tbr)s",
-        "%(resolution)s",
-        "%(filesize)s",
-        "%(container)s",
-        "%(protocol)s",
-        "%(extractor)s",
-        "%(extractor_key)s",
-    ]
-)
-
-test = inquirer.text(
-    message="Enter a template",
-    completer=test_completer,
-    validate=lambda result: len(result) > 0,
-).execute()
-
 logger.debug("########### Starting YouTube Archiver ###########")
 
 relative_path = os.path.dirname(os.path.abspath(__file__))
@@ -66,12 +21,17 @@ os.chdir(relative_path)
 
 logger.debug(f"Changed working directory to {relative_path}")
 
-settings = settings.Settings()
+try:
+    settings = settings.SettingsManager.load_settings("settings.json")
+except FileNotFoundError:
+    logger.debug("No settings file found. Going with default settings.")
+    settings = settings.SettingsManager.load_default_settings()
 
+settings.ffmpeg_is_installed, settings.ffmpeg_path = ffmpeg_is_installed()
 
 if settings.ffmpeg_is_installed is False:
     logger.warning("ffmpeg is not installed.")
-    option = InquirerMenu.ffmpeg_download_question.execute()
+    option = InquirerMenu.ffmpeg_download_question().execute()
     if option is True:
         logger.debug("User chose to download ffmpeg.")
         if not sys.platform == "linux":
