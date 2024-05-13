@@ -50,72 +50,11 @@ class Menu:
         )
         self._settings = menu_param.Settings
 
-    def set_download_mode_settings(self):
-        """
-        Sets the appropriate settings based on the download type and other settings.
-        """
-        if self._settings.url:
-            self._settings.url_is_playlist = utility.url_is_only_playlist(
-                self._settings.url
-            )
-            self._settings.url_is_video_in_playlist = utility.url_is_video_in_playlist(
-                self._settings.url
-            )
-            self._settings.url_is_channel = utility.url_is_channel(self._settings.url)
-
-        if self._menu_param.download_type == DownloadType.ARCHIVE:
-            self._settings.archive_options = {
-                "writedescription": True,
-                "writeannotations": True,
-                "writeinfojson": True,
-                "writethumbnail": True,
-                "writeurllink": True,
-                "writewebloclink": True,
-                "writedesktoplink": True,
-                "writesubtitles": True,
-                "allsubtitles": True,
-                "overwrites": False,
-            }
-            if self._settings.url_is_channel:
-                self._settings.output_template = "%(uploader)s/%(upload_date)s - %(title)s/%(title)s [%(id)s].%(ext)s"
-            elif self._settings.url_is_playlist:
-                if self._settings.ignore_playlist:
-                    self._settings.output_template = "%(title)s.%(ext)s"
-                else:
-                    self._settings.output_template = "%(playlist_title)s/%(uploader)s/%(upload_date)s - %(title)s/%(upload_date)s [%(id)s].%(ext)s"
-
-        else:
-            self._settings.output_template = "%(title)s.%(ext)s"
+    def update_settings_and_menu(self):
+        pass
 
     def check_required_settings(self) -> bool:
-        """
-        Checks if the required settings are set.
-
-        Returns:
-            bool: True if the required settings are set, False otherwise.
-        """
-        if not self._settings.url:
-            return False
-        if not self._settings.download_folder:
-            return False
-        if self._settings.use_archive_file and not self._settings.archive_file:
-            return False
-        if self._settings.url_is_playlist and not self._settings.playlist_options:
-            return False
-        if self._settings.url_is_channel and not self._settings.channel_options:
-            return False
-        if not self._settings.stream_types:
-            return False
-        if not self._settings.stream_select_mode:
-            return False
-        if not self._settings.stream_formats:
-            return False
-        if not self._settings.output_template:
-            return False
-        if self._menu_param.download_type == DownloadType.ARCHIVE:
-            if not self._settings.archive_options:
-                return False
-        return True
+        pass
 
     def main_menu_constructor(self) -> list[Choice]:
         """
@@ -128,7 +67,7 @@ class Menu:
         choices.append(
             Choice(
                 value="select_url",
-                name=f"Select URL: {'*' if not self._settings.url else self._settings.url}",
+                name=f"Select URL: {self._settings.url if self._settings.url else '*'}",
             )
         )
         if (
@@ -140,7 +79,7 @@ class Menu:
             choices.append(
                 Choice(
                     value="select_folder",
-                    name=f"Select Folder: {'*' if not self._settings.download_folder else self._settings.download_folder}",
+                    name=f"Select Folder: {self._settings.persistent.download_folder if self._settings.persistent.download_folder else '*'}",
                 )
             )
             choices.append(
@@ -149,21 +88,18 @@ class Menu:
             choices.append(
                 Choice(
                     value="use_archive_file",
-                    name=f"Use Archive File: {menu_components.format_boolean(self._settings.use_archive_file)}",
+                    name=f"Use Archive File: {menu_components.format_boolean(self._settings.persistent.use_archive_file)}",
                 )
             )
-            if (
-                self._settings.use_archive_file
-            ):  # Only show the archive file option if the user wants to use an archive file
+            if self._settings.persistent.use_archive_file:
                 choices.append(
                     Choice(
                         value="archive_file",
-                        name=f"Archive File: {'*' if not self._settings.archive_file else self._settings.archive_file}",
+                        name=f"Archive File: {self._settings.persistent.archive_file if self._settings.persistent.archive_file else '*'}",
                     )
                 )
-            choices.append(
-                Separator()
-            )  # Add a separator between the archive file and playlist options
+            choices.append(Separator())  # Add a separator after the archive file option
+
             if (
                 self._settings.url_is_playlist
                 or self._settings.url_is_video_in_playlist
@@ -171,30 +107,22 @@ class Menu:
                 choices.append(
                     Choice(
                         value="playlist_options",
-                        name=f"Playlist Options: {self._settings.playlist_options}",
+                        name="Playlist Options:",
                     )
                 )
             if self._settings.url_is_channel:
                 choices.append(
                     Choice(
                         value="channel_options",
-                        name=f"Channel Options: {self._settings.channel_options}",
+                        name="Channel Options:",
                     )
                 )
-            choices.append(Separator())
             choices.append(
                 Choice(
                     value="download_options",
-                    name="Download Options:",  # TODO: Display a * if not all required sub-menu settings are set. This will require a function to check if all required settings are set.
+                    name="Download Options:",
                 )
             )
-            if self._menu_param.download_type == DownloadType.ARCHIVE:
-                choices.append(
-                    Choice(
-                        value="archive_options",
-                        name=f"Archive Options: {self._settings.archive_options}",
-                    )
-                )
             if self.check_required_settings():
                 choices.append(
                     Choice(
@@ -271,7 +199,7 @@ class Menu:
                 choices=download_options_choices,
                 default=self.get_default_choice(download_options_choices),
                 pointer=">",
-                long_instruction="Use the arrow keys to navigate, and Enter to select. Press CTRL+Z or 'B' to return to the main menu.",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
                 keybindings=keybindings,
             ).execute()
 
@@ -313,7 +241,6 @@ class Menu:
             ),
             "download": lambda: self.download(),
         }
-        self.set_download_mode_settings()
         while True:
             utility.clear()
             main_menu_choices = []
@@ -325,7 +252,7 @@ class Menu:
                 choices=main_menu_choices,
                 default=self.get_default_choice(main_menu_choices),
                 pointer=">",
-                long_instruction="Use the arrow keys to navigate, and Enter to select. Press CTRL+Z or 'B' to return to the main menu.",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
                 mandatory=False,
                 keybindings=keybindings,
             ).execute()
