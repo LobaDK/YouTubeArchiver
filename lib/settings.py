@@ -1,20 +1,12 @@
+import json
 from yt_dlp.utils import DateRange as YDLDateRange
 
+from lib.utility import logger, determine_url_type
 from lib.template_constants import _TEMPLATE_FIELDS, _DEFAULT_TEMPLATES
 
 
 class Settings:
     def __init__(self):
-        # TODO: FEATURE: Add a way to save and load settings from a file.
-        # - This will allow user-defined settings to be saved and loaded between sessions.
-        # - The settings file will be a JSON file that will be saved in the same directory as the program.
-        # - To simplify things, we can provide a settings sub-menu that provides options to save and reset to default settings.
-        # - The program will always load the settings file on startup and apply the settings to the program.
-        # - Saving settings will write the current settings to the settings file.
-        # - Resetting to default settings will delete the settings file and re-initialize the settings object.
-        # - We would need a function or class that acts as the settings manager.
-        # - The settings manager will handle saving, loading, and resetting settings, to avoid touching the settings class directly.
-        # - Either extend this feature to include output templates, or create a separate feature for output templates.
 
         # Template fields and default templates
         # Template fields are used to provide a list of available fields that can be used in the output template.
@@ -24,24 +16,31 @@ class Settings:
 
         # "System" settings
         self.ffmpeg_is_installed = False
-        self.download_type: str = None
+        self.ffmpeg_path = None
 
-        # General or most common settings
-        self.url: str = None
-        self.download_folder: str = None
-        self.use_archive_file: bool = True
-        self.archive_file: str = None
-
-        # sub-class settings
-        self.download_options: DownloadOptions = DownloadOptions()
-        self.playlist_options: PlaylistOptions = PlaylistOptions()
-        self.channel_options: ChannelOptions = ChannelOptions()
+        # General settings
+        self._url: str = None
+        self.persistent: PersistentSettings = PersistentSettings()
 
         # The following attributes are set by the program and are not user-defined.
         self.url_is_playlist: bool = False
         self.url_is_video_in_playlist: bool = False
         self.url_is_channel: bool = False
+        self.url_is_video: bool = False
         self.extracted_info: dict = None
+
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, value):
+        self._url = value
+        url_type = determine_url_type(value)
+        self.url_is_playlist = url_type == "playlist"
+        self.url_is_video_in_playlist = url_type == "video_in_playlist"
+        self.url_is_channel = url_type == "channel"
+        self.url_is_video = url_type == "video"
 
     @property
     def expected_downloads(self):
@@ -79,6 +78,33 @@ class Settings:
             return len(self.extracted_info["entries"])
         # If we can't determine the number of expected downloads, return None.
         return None
+
+
+class PersistentSettings:
+    """
+    Represents persistent settings that are saved and loaded from a file.
+
+    Attributes:
+        download_folder (str): The folder to download videos to. Acts as the `--output` option in yt-dlp.
+        use_archive_file (bool): Flag indicating whether to use an archive file to keep track of downloaded videos. Acts as the `--download-archive` option in yt-dlp.
+        archive_file (str): The archive file to keep track of downloaded videos. Acts as the `--download-archive` option in yt-dlp.
+        download_mode (str): A preset of settings to apply to the program (e.g., download or archive). Not used in yt-dlp.
+        download_options (DownloadOptions): The download options.
+        playlist_options (PlaylistOptions): The playlist options.
+        channel_options (ChannelOptions): The channel options.
+    """
+
+    def __init__(self) -> None:
+        self.download_folder: str = None
+        self.use_archive_file: bool = True
+        self.archive_file: str = None
+
+        self.download_mode: str = "download"
+
+        # sub-class settings
+        self.download_options: DownloadOptions = DownloadOptions()
+        self.playlist_options: PlaylistOptions = PlaylistOptions()
+        self.channel_options: ChannelOptions = ChannelOptions()
 
 
 class IndexRange:
@@ -221,3 +247,124 @@ class ChannelOptions(PlaylistAndChannelBaseOptions):
         # All options for playlists are also available for channels in yt-dlp
         # except for the `--[yes|no]-playlist` options.
         pass
+
+
+class SettingsManager:
+    """
+    The SettingsManager class provides methods to save, load, reset, and sanitize settings.
+
+    It allows saving settings to a file, loading settings from a file, loading default settings,
+    resetting settings to default values, and sanitizing input data to ensure correct types and recognized settings.
+
+    Note:
+        This class does not perform any error handling and expects the calling code to handle any exceptions that may occur.
+
+    Usage:
+        ```python
+        SettingsManager.save_settings(settings, "settings.json")
+        settings = SettingsManager.load_settings("settings.json")
+        settings = SettingsManager.load_default_settings()
+        settings = SettingsManager.reset_settings(settings)
+        data = SettingsManager.sanitize_settings(data)
+        ```
+    """
+
+    # TODO: Either extend SettingsManager to include output templates, or create a separate feature for output templates.
+
+    @staticmethod
+    def save_settings(from_object: Settings, to_file: str):
+        """
+        Low-level method to save settings to a file.
+
+        Converts the settings object to a dictionary and dumps it to a JSON file.
+        Before saving, it sanitizes the settings to ensure that the keys are recognized settings and the values have the correct type.
+        Only the persistent settings are saved.
+
+        Args:
+            from_object (Settings): The settings object to save.
+            to_file (str): The file to save the settings to.
+        """
+        sanitized_settings = SettingsManager.sanitize_settings(
+            vars(from_object.persistent)
+        )
+        with open(to_file, "w") as f:
+            json.dump(sanitized_settings, f, indent=4)
+
+    @staticmethod
+    def load_settings(from_file: str) -> Settings:
+        """
+        Low-level method to load settings from a file.
+
+        A JSON file from a dumped PersistentSettings object is expected.
+        The method will attempt to check and sanitize the JSON data before applying it to the settings object.
+
+        Args:
+            from_file (str): The file to load the settings from.
+
+        Returns:
+            Settings: The settings object with values loaded from the file.
+        """
+        with open(from_file, "r") as f:
+            settings = Settings()
+            settings.persistent.__dict__.update(
+                SettingsManager.sanitize_settings(json.load(f))
+            )
+            return settings
+
+    @staticmethod
+    def load_default_settings() -> Settings:
+        """
+        Low-level method to load default settings.
+
+        Returns:
+            Settings: The settings object with default values.
+        """
+        return Settings()
+
+    @staticmethod
+    def reset_settings(settings: Settings):
+        """
+        Low-level method to reset settings to default values.
+
+        Args:
+            settings (Settings): The settings object to reset.
+        """
+        settings.__init__()
+        return settings
+
+    @staticmethod
+    def sanitize_settings(data: dict) -> Settings:
+        """
+        Sanitizes the input data dictionary by checking if the keys are recognized settings.
+        If a key is not recognized, it ignores the setting.
+        If a key is recognized, it checks if the value has the correct type.
+        If the value has an incorrect type, it uses the default value for that setting.
+        Returns the sanitized data dictionary.
+
+        note:
+            This method is used internally by the SettingsManager class to sanitize settings data before applying it to the settings object.
+
+        Args:
+            data (dict): The input data dictionary containing the settings.
+
+        Returns:
+            dict: The sanitized data dictionary containing the settings.
+
+        """
+        settings = Settings()
+        settings_vars = vars(settings.persistent)
+        sanitized_data = {}
+        for key in data.keys():
+            if key not in settings_vars:
+                logger.warning(
+                    f"The setting {key} is not recognized. Ignoring this setting."
+                )
+                continue
+            if not isinstance(data[key], type(settings_vars[key])):
+                logger.warning(
+                    f"Incorrect type for key {key} in JSON config. Expected {type(settings_vars[key])}, got {type(data[key])}. Using default value."
+                )
+                sanitized_data[key] = settings_vars[key]
+            else:
+                sanitized_data[key] = data[key]
+        return sanitized_data
