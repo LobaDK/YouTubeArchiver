@@ -9,6 +9,7 @@ import subprocess
 import tqdm
 import certifi
 import pkg_resources
+import re
 
 from urllib.error import URLError
 from logging.handlers import TimedRotatingFileHandler
@@ -40,43 +41,18 @@ class ChoiceEnum(Enum):
     MENU = "m"
 
 
-def url_is_channel(url: str) -> bool:
-    """
-    Check if the URL is a channel URL.
-
-    Args:
-        url (str): The URL to check.
-
-    Returns:
-        bool: True if the URL is a channel URL, False otherwise.
-    """
-    return "channel/" in url
-
-
-def url_is_only_playlist(url: str) -> bool:
-    """
-    Check if the URL is a playlist URL.
-
-    Args:
-        url (str): The URL to check.
-
-    Returns:
-        bool: True if the URL is a playlist URL, False otherwise.
-    """
-    return "playlist?list=" in url
-
-
-def url_is_video_in_playlist(url: str) -> bool:
-    """
-    Check if the URL is a video in a playlist URL.
-
-    Args:
-        url (str): The URL to check.
-
-    Returns:
-        bool: True if the URL is a video in a playlist URL, False otherwise.
-    """
-    return all(x in url for x in ["watch?v=", "&list="])
+def determine_url_type(url: str) -> str:
+    regex = r"^https://(?:(?:www\.|music\.)?youtube\.com/(?:watch\?v=(.{11})&list=(.+)|playlist\?list=(.+)|@([^/]+)|channel/(.+))|youtu\.be/(.+))"
+    match = re.match(regex, url)
+    if match:
+        if match.group(1) and match.group(2):
+            return "video_in_playlist"
+        elif match.group(3):
+            return "playlist"
+        elif match.group(4) or match.group(5):
+            return "channel"
+    else:
+        return "video"
 
 
 def create_folder(folder: Path):
