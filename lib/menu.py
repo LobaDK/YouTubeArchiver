@@ -50,6 +50,107 @@ class Menu:
         )
         self._settings = menu_param.Settings
 
+    def main_menu(self):
+        logger.debug(
+            f"download_type: {self._download_type}, is_ffmpeg_installed: {self._settings.ffmpeg_is_installed}"
+        )
+        main_menu_actions = {
+            "select_url": lambda: setattr(
+                self._settings, "url", menu_components.select_url(self._settings.url)
+            ),
+            "select_folder": lambda: setattr(
+                self._settings, "download_folder", menu_components.select_folder()
+            ),
+            "use_archive_file": lambda: setattr(
+                self._settings, "use_archive_file", not self._settings.use_archive_file
+            ),
+            "archive_file": lambda: setattr(
+                self._settings, "archive_file", menu_components.select_archive_file()
+            ),
+            "playlist_options": lambda: setattr(
+                self._settings,
+                "playlist_options",
+                menu_components.get_playlist_options(),
+            ),
+            "channel_options": lambda: setattr(
+                self._settings, "channel_options", menu_components.get_channel_options()
+            ),
+            "download_options": lambda: self.download_options_menu(),
+            "download": lambda: self.download(),
+        }
+        while True:
+            utility.clear()
+            main_menu_choices = []
+            for choices in self.main_menu_constructor():
+                main_menu_choices.extend(choices)
+            print(f"Download type: {self._download_type.capitalize()}\n")
+            main_menu_choice = inquirer.select(
+                message=f"{'Please start by selecting a URL:' if not self._settings.url else 'Options marked with a * are required and have not been set yet.'}",
+                choices=main_menu_choices,
+                default=self.get_default_choice(main_menu_choices),
+                pointer=">",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
+                mandatory=False,
+                keybindings=keybindings,
+            ).execute()
+
+            if main_menu_choice in main_menu_actions:
+                main_menu_actions[main_menu_choice]()
+            elif main_menu_choice is None:
+                return
+
+    def download_options_menu(self):
+        """
+        Menu for setting download options.
+        """
+        download_options_actions = {
+            "stream_types": lambda: setattr(
+                self._settings,
+                "stream_types",
+                menu_components.get_stream_types(),
+            ),
+            "stream_select_mode": lambda: setattr(
+                self._settings,
+                "stream_select_mode",
+                menu_components.get_stream_select_mode(),
+            ),
+            "combine_streams": lambda: setattr(
+                self._settings,
+                "combine_streams",
+                not self._settings.combine_streams,
+            ),
+            "stream_select_formats": lambda: setattr(
+                self._settings,
+                "stream_formats",
+                menu_components.get_stream_formats(
+                    self._settings.stream_types, self._settings.combine_streams
+                ),
+            ),
+            "output_template": lambda: setattr(
+                self._settings,
+                "output_template",
+                menu_components.get_output_template(self._settings.output_template),
+            ),
+        }
+        while True:
+            utility.clear()
+            download_options_choices = []
+            for choices in self.main_menu_constructor():
+                download_options_choices.extend(choices)
+            download_options_choice = inquirer.select(
+                message="Select an option to configure:",
+                choices=download_options_choices,
+                default=self.get_default_choice(download_options_choices),
+                pointer=">",
+                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
+                keybindings=keybindings,
+            ).execute()
+
+            if download_options_choice in download_options_actions:
+                download_options_actions[download_options_choice]()
+            elif download_options_choice is None:
+                return
+
     def update_settings_and_menu(self):
         pass
 
@@ -155,112 +256,6 @@ class Menu:
         if self.check_required_settings():
             return "start_download"
         return choices[0].value
-
-    def download_options_menu(self):
-        """
-        Menu for setting download options.
-        """
-        download_options_actions = {
-            "stream_types": lambda: setattr(
-                self._settings,
-                "stream_types",
-                menu_components.get_stream_types(),
-            ),
-            "stream_select_mode": lambda: setattr(
-                self._settings,
-                "stream_select_mode",
-                menu_components.get_stream_select_mode(),
-            ),
-            "combine_streams": lambda: setattr(
-                self._settings,
-                "combine_streams",
-                not self._settings.combine_streams,
-            ),
-            "stream_select_formats": lambda: setattr(
-                self._settings,
-                "stream_formats",
-                menu_components.get_stream_formats(
-                    self._settings.stream_types, self._settings.combine_streams
-                ),
-            ),
-            "output_template": lambda: setattr(
-                self._settings,
-                "output_template",
-                menu_components.get_output_template(self._settings.output_template),
-            ),
-        }
-        while True:
-            utility.clear()
-            download_options_choices = []
-            for choices in self.main_menu_constructor():
-                download_options_choices.extend(choices)
-            download_options_choice = inquirer.select(
-                message="Select an option to configure:",
-                choices=download_options_choices,
-                default=self.get_default_choice(download_options_choices),
-                pointer=">",
-                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
-                keybindings=keybindings,
-            ).execute()
-
-            if download_options_choice in download_options_actions:
-                download_options_actions[download_options_choice]()
-            elif download_options_choice is None:
-                return
-
-    def main_menu(self):
-        logger.debug(
-            f"download_type: {self._download_type}, is_ffmpeg_installed: {self._settings.ffmpeg_is_installed}"
-        )
-        main_menu_actions = {
-            "select_url": lambda: setattr(
-                self._settings, "url", menu_components.select_url(self._settings.url)
-            ),
-            "select_folder": lambda: setattr(
-                self._settings, "download_folder", menu_components.select_folder()
-            ),
-            "use_archive_file": lambda: setattr(
-                self._settings, "use_archive_file", not self._settings.use_archive_file
-            ),
-            "archive_file": lambda: setattr(
-                self._settings, "archive_file", menu_components.select_archive_file()
-            ),
-            "playlist_options": lambda: setattr(
-                self._settings,
-                "playlist_options",
-                menu_components.get_playlist_options(),
-            ),
-            "channel_options": lambda: setattr(
-                self._settings, "channel_options", menu_components.get_channel_options()
-            ),
-            "download_options": lambda: self.download_options_menu(),
-            "archive_options": lambda: setattr(
-                self._settings,
-                "archive_options",
-                menu_components.get_archive_options(),
-            ),
-            "download": lambda: self.download(),
-        }
-        while True:
-            utility.clear()
-            main_menu_choices = []
-            for choices in self.main_menu_constructor():
-                main_menu_choices.extend(choices)
-            print(f"Download type: {self._download_type.capitalize()}\n")
-            main_menu_choice = inquirer.select(
-                message=f"{'Please start by selecting a URL:' if not self._settings.url else 'Options marked with a * are required and have not been set yet.'}",
-                choices=main_menu_choices,
-                default=self.get_default_choice(main_menu_choices),
-                pointer=">",
-                long_instruction="Use the arrow keys to navigate, and Enter to select. Press backspace, CTRL+Z, or 'B' to return to the main menu.",
-                mandatory=False,
-                keybindings=keybindings,
-            ).execute()
-
-            if main_menu_choice in main_menu_actions:
-                main_menu_actions[main_menu_choice]()
-            elif main_menu_choice is None:
-                return
 
     def menu(menu_param: MenuParam):
         """
