@@ -17,6 +17,45 @@ TODO:
 """
 
 
+class ExtendedChoice(Choice):
+    """Custom overridden Choice class to extend the functionality of the original Choice class.
+
+    A simple dataclass that can be used as an alternate to using :class:`dict`
+    when working with choices.
+
+    Args:
+        value: The value of the choice when user selects this choice.
+        name: The value that should be presented to the user prior/after selection of the choice.
+            This value is optional, if not provided, it will fallback to the string representation of `value`.
+        enabled: Indicates if the choice should be pre-selected.
+            This only has effects when the prompt has `multiselect` enabled.
+        is_required: Indicates if the setting in relation to the choice is required.
+        depends_on: A dictionary of settings where the value must match for the choice to be shown. Multiple settings will act as an AND condition.
+
+    Example:
+        ```python
+        ExtendedChoice(
+            value="select_folder",
+            name="Select Folder:",
+            is_required=True, # This indicates that the setting must contain a value.
+            depends_on={"url_is_set": True} # This indicates that the Settings.url_is_set attribute must be True for the choice to be shown.
+        )
+        ```
+    """
+
+    def __init__(
+        self,
+        value: str,
+        name: str,
+        enabled: bool = True,
+        is_required: bool = False,
+        depends_on: dict[str] = {},
+    ):
+        super().__init__(value, name, enabled)
+        self.is_required = is_required
+        self.depends_on = depends_on
+
+
 class ChoiceDependency:
     def __init__(self, required_settings: dict[str]):
         """
@@ -126,7 +165,7 @@ class Menu:
 class MainMenu:
     # TODO: Override Choice class and add custom "depends_on" dict attribute instead of this mess
     choices = [
-        Choice(
+        ExtendedChoice(
             value="select_url",
             name="Select URL:",
         ),
