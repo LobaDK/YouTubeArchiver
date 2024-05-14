@@ -23,6 +23,7 @@ class Settings:
         self.persistent: PersistentSettings = PersistentSettings()
 
         # The following attributes are set by the program and are not user-defined.
+        self.url_is_set: bool = False
         self.url_is_playlist: bool = False
         self.url_is_video_in_playlist: bool = False
         self.url_is_channel: bool = False
@@ -36,6 +37,7 @@ class Settings:
     @url.setter
     def url(self, value):
         self._url = value
+        self.url_is_set = value is not None
         url_type = determine_url_type(value)
         self.url_is_playlist = url_type == "playlist"
         self.url_is_video_in_playlist = url_type == "video_in_playlist"
@@ -95,7 +97,7 @@ class PersistentSettings:
     """
 
     def __init__(self) -> None:
-        self.download_folder: str = None
+        self._download_folder: str = None
         self.use_archive_file: bool = True
         self.archive_file: str = None
 
@@ -105,6 +107,15 @@ class PersistentSettings:
         self.download_options: DownloadOptions = DownloadOptions()
         self.playlist_options: PlaylistOptions = PlaylistOptions()
         self.channel_options: ChannelOptions = ChannelOptions()
+
+    @property
+    def download_folder(self):
+        return self._download_folder
+
+    @download_folder.setter
+    def download_folder(self, value):
+        self._download_folder = value
+        self.download_folder_is_set = value is not None
 
 
 class IndexRange:

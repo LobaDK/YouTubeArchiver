@@ -2,6 +2,7 @@ import os
 import sys
 import time
 from lib.utility import logger, installation_helper, ffmpeg_is_installed
+from lib.menu_builder import Menu, MainMenu
 
 try:
     import yt_dlp  # noqa We need to check if yt-dlp is installed
@@ -57,9 +58,9 @@ else:
 
 # Functions for the main menu options
 functions = {
-    "D": lambda: menu.Menu(
-        menu.MenuParam(Settings=settings, download_type=menu.DownloadType.DOWNLOAD)
-    ).main_menu(),
+    "D": lambda: Menu(
+        settings, MainMenu.choices, MainMenu.choice_required_settings
+    ).start(),
     "A": lambda: menu.Menu(
         menu.MenuParam(Settings=settings, download_type=menu.DownloadType.ARCHIVE)
     ).main_menu(),
