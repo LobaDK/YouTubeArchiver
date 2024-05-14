@@ -124,6 +124,7 @@ class Menu:
 
 
 class MainMenu:
+    # TODO: Override Choice class and add custom "depends_on" dict attribute instead of this mess
     choices = [
         Choice(
             value="select_url",
