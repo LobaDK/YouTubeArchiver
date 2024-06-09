@@ -333,17 +333,6 @@ class SettingsManager:
         return Settings()
 
     @staticmethod
-    def reset_settings(settings: Settings):
-        """
-        Low-level method to reset settings to default values.
-
-        Args:
-            settings (Settings): The settings object to reset.
-        """
-        settings.__init__()
-        return settings
-
-    @staticmethod
     def sanitize_settings(data: dict) -> Settings:
         """
         Sanitizes the input data dictionary by checking if the keys are recognized settings.
